@@ -1,1644 +1,1886 @@
 <!DOCTYPE html>
-<html lang="en-AU" data-theme="auto">
+<html lang="en-AU" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="version" content="0.1.0">
-<meta name="description" content="Token Ledger - local-first AI token usage dashboard">
-<meta name="color-scheme" content="light dark">
-<title>Token Ledger</title>
+<title>Situational Traffic Monitor — Live Air &amp; Marine</title>
+<meta name="description" content="Client-side live air and marine traffic monitor. OpenSky state vectors and AISStream position reports on a Leaflet map.">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
 <style>
-:root{
-  color-scheme:light;
-  --ih-font-heading:'Barlow Condensed','Arial Narrow','Segoe UI',sans-serif;
-  --ih-font-body:'IBM Plex Sans','Segoe UI',Arial,sans-serif;
-  --ih-font-code:'IBM Plex Mono','Cascadia Mono',Consolas,monospace;
-  --ih-bg:#f3f5f8; --ih-sidebar:#e9edf3; --ih-surface:#ffffff; --ih-surface-alt:#edf1f6;
-  --ih-surface-selected:#dfe8f6; --ih-text:#191d23; --ih-text-secondary:#505a68; --ih-text-muted:#5f6976;
-  --ih-text-on-primary:#ffffff; --ih-text-on-accent:#17140b;
-  --ih-primary:#24529a; --ih-primary-hover:#1c447f; --ih-primary-2:#385f9e; --ih-primary-soft:#dfe8f6;
-  --ih-accent:#d87822; --ih-accent-hover:#c96c1a; --ih-accent-soft:#f5dcc6;
-  --ih-border:#c9ced6; --ih-divider:#d8dde4; --ih-focus:#5f8fd8;
-  --ih-border-control:#788498; --ih-marker:#bf6a1e;
-  --ih-warning-text:#895b1f; --ih-error-text:#9d4541;
-  --ih-success:#3e745a; --ih-success-soft:#e2eee7;
-  --ih-warning:#a16b24; --ih-warning-soft:#f4e7d3;
-  --ih-error:#b34f4a; --ih-error-soft:#f4dedc;
-  --ih-code-bg:#172033; --ih-code-text:#edf2fa;
-  --ih-chart-1:#24529a; --ih-chart-2:#d87822; --ih-chart-3:#3e745a;
-  --ih-chart-4:#5d78a4; --ih-chart-5:#b88a2a; --ih-chart-6:#b34f4a;
-  --ih-grid:#d8dde4;
-  --ih-radius:4px; --ih-radius-dialog:6px;
-  --ih-shadow-card:0 4px 14px rgba(29,49,78,.08);
-  --ih-shadow-floating:0 12px 32px rgba(29,49,78,.14);
-  --ih-content-width:1440px;
-}
-[data-theme='dark']{
-  color-scheme:dark;
-  --ih-bg:#10151c; --ih-sidebar:#151b23; --ih-surface:#181f29; --ih-surface-alt:#222c39;
-  --ih-surface-selected:#263b58; --ih-text:#f3f5f8; --ih-text-secondary:#c0c8d3; --ih-text-muted:#9aa6b4;
-  --ih-text-on-primary:#0a1320; --ih-text-on-accent:#17140b;
-  --ih-primary:#7ea8f2; --ih-primary-hover:#9bbdff; --ih-primary-2:#537dc5; --ih-primary-soft:#263b58;
-  --ih-accent:#f29b4b; --ih-accent-hover:#ffc071; --ih-accent-soft:#613719;
-  --ih-border:#354253; --ih-divider:#2a3543; --ih-focus:#7ea8f2;
-  --ih-border-control:#627a99; --ih-marker:#f29b4b;
-  --ih-warning-text:#d5a25e; --ih-error-text:#e3857f;
-  --ih-success:#7bba94; --ih-success-soft:#203d30;
-  --ih-warning:#d5a25e; --ih-warning-soft:#49351d;
-  --ih-error:#e07a74; --ih-error-soft:#4b2929;
-  --ih-code-bg:#070b11; --ih-code-text:#edf2fa;
-  --ih-chart-1:#7ea8f2; --ih-chart-2:#f29b4b; --ih-chart-3:#7bba94;
-  --ih-chart-4:#9cb6db; --ih-chart-5:#d8b35e; --ih-chart-6:#e07a74;
-  --ih-grid:#2a3543;
+/* ============================================================
+   Ian Hay visual system — cobalt blue / signal orange
+   ============================================================ */
+:root,[data-theme='dark']{
+  --ih-bg:#10151C; --ih-sidebar:#151B23; --ih-surface:#181F29; --ih-surface-alt:#222C39;
+  --ih-surface-selected:#263B58; --ih-text:#F3F5F8; --ih-text-secondary:#C0C8D3; --ih-text-muted:#9AA6B4;
+  --ih-primary:#7EA8F2; --ih-primary-2:#537DC5; --ih-primary-soft:#263B58;
+  --ih-accent:#F29B4B; --ih-accent-hover:#FFC071; --ih-accent-soft:#613719;
+  --ih-border:#354253; --ih-divider:#2A3543; --ih-focus:#7EA8F2;
+  --ih-success:#7BBA94; --ih-warning:#D5A25E; --ih-error:#E07A74;
+  --ih-map-bg:#182A40; --ih-code-bg:#070B11; --ih-code-text:#EDF2FA;
+  --ih-text-on-primary:#10151C; --ih-primary-hover:#A3C2FA;
+  --ih-text-on-accent:#10151C; --ih-success-soft:#1E3A2B;
+  --ih-error-strong:#E07A74; --ih-success-strong:#7BBA94;
   --ih-shadow-card:0 8px 24px rgba(0,0,0,.22);
-  --ih-shadow-floating:0 16px 40px rgba(0,0,0,.34);
+  --ih-shadow-float:0 16px 40px rgba(0,0,0,.34);
+  --ih-scrim:rgba(9,13,19,.86);
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r:4px; --r-dialog:6px;
+  --font-head:"Barlow Condensed","Arial Narrow","Segoe UI",sans-serif;
+  --font-body:"IBM Plex Sans","Segoe UI",Arial,sans-serif;
+  --font-mono:"IBM Plex Mono","Cascadia Mono",Consolas,monospace;
+  --topbar-h:56px;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme:dark){
-  [data-theme='auto']{
-    color-scheme:dark;
-    --ih-bg:#10151c; --ih-sidebar:#151b23; --ih-surface:#181f29; --ih-surface-alt:#222c39;
-    --ih-surface-selected:#263b58; --ih-text:#f3f5f8; --ih-text-secondary:#c0c8d3; --ih-text-muted:#9aa6b4;
-    --ih-text-on-primary:#0a1320; --ih-text-on-accent:#17140b;
-    --ih-primary:#7ea8f2; --ih-primary-hover:#9bbdff; --ih-primary-2:#537dc5; --ih-primary-soft:#263b58;
-    --ih-accent:#f29b4b; --ih-accent-hover:#ffc071; --ih-accent-soft:#613719;
-    --ih-border:#354253; --ih-divider:#2a3543; --ih-focus:#7ea8f2;
-    --ih-border-control:#627a99; --ih-marker:#f29b4b;
-    --ih-warning-text:#d5a25e; --ih-error-text:#e3857f;
-    --ih-success:#7bba94; --ih-success-soft:#203d30;
-    --ih-warning:#d5a25e; --ih-warning-soft:#49351d;
-    --ih-error:#e07a74; --ih-error-soft:#4b2929;
-    --ih-code-bg:#070b11; --ih-code-text:#edf2fa;
-    --ih-chart-1:#7ea8f2; --ih-chart-2:#f29b4b; --ih-chart-3:#7bba94;
-    --ih-chart-4:#9cb6db; --ih-chart-5:#d8b35e; --ih-chart-6:#e07a74;
-    --ih-grid:#2a3543;
-    --ih-shadow-card:0 8px 24px rgba(0,0,0,.22);
-    --ih-shadow-floating:0 16px 40px rgba(0,0,0,.34);
-  }
+html[data-theme="light"],[data-theme='light']{
+  --ih-bg:#F3F5F8; --ih-sidebar:#E9EDF3; --ih-surface:#FFFFFF; --ih-surface-alt:#EDF1F6;
+  --ih-surface-selected:#DFE8F6; --ih-text:#191D23; --ih-text-secondary:#505A68; --ih-text-muted:#5F6976;
+  --ih-primary:#24529A; --ih-primary-2:#385F9E; --ih-primary-soft:#DFE8F6;
+  --ih-accent:#D87822; --ih-accent-hover:#C96C1A; --ih-accent-soft:#F5DCC6;
+  --ih-border:#C9CED6; --ih-divider:#D8DDE4; --ih-focus:#5F8FD8;
+  --ih-success:#3E745A; --ih-warning:#A16B24; --ih-error:#B34F4A;
+  --ih-map-bg:#DBE3EE; --ih-code-bg:#172033; --ih-code-text:#EDF2FA;
+  --ih-text-on-primary:#FFFFFF; --ih-primary-hover:#1D4380;
+  --ih-text-on-accent:#191D23; --ih-success-soft:#E4F0E9;
+  --ih-error-strong:#A3453F; --ih-success-strong:#2F5B46;
+  --ih-shadow-card:0 4px 14px rgba(29,49,78,.08);
+  --ih-shadow-float:0 12px 32px rgba(29,49,78,.14);
+  --ih-scrim:rgba(243,245,248,.90);
+  color-scheme:light;
 }
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0}
+
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;margin:0;}
 body{
-  background:var(--ih-bg); color:var(--ih-text);
-  font:400 15px/1.53 var(--ih-font-body);
-  -webkit-text-size-adjust:100%;
-  padding-bottom:env(safe-area-inset-bottom);
+  font-family:var(--font-body); font-size:15px; line-height:23px;
+  background:var(--ih-bg); color:var(--ih-text); overflow:hidden;
+  -webkit-font-smoothing:antialiased;
 }
-h1,h2,h3,h4{font-family:var(--ih-font-heading);margin:0;font-weight:600;letter-spacing:.01em}
-h1{font-size:32px;line-height:36px;font-weight:700}
-h2{font-size:26px;line-height:30px}
-h3{font-size:20px;line-height:24px}
-h4{font-size:17px;line-height:21px}
-a{color:var(--ih-primary)}
-:focus-visible{outline:2px solid var(--ih-focus);outline-offset:2px;border-radius:2px}
-.mono{font-family:var(--ih-font-code)}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+h1,h2,h3,h4{font-family:var(--font-head);margin:0;letter-spacing:.2px;}
+h1{font-size:26px;line-height:30px;font-weight:700;}
+h2{font-size:20px;line-height:24px;font-weight:600;}
+h3{font-size:17px;line-height:21px;font-weight:600;}
+code,.mono,.num{font-family:var(--font-mono);font-size:13px;line-height:20px;}
+button,input,select{font-family:inherit;font-size:14px;color:var(--ih-text);}
+:focus-visible{outline:2px solid var(--ih-focus);outline-offset:2px;border-radius:var(--r);}
+::placeholder{color:var(--ih-text-muted);opacity:1;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;}
 
-/* ---------- shell ---------- */
-.app-header{
-  position:sticky;top:0;z-index:40;
-  background:var(--ih-sidebar);
-  border-bottom:1px solid var(--ih-border);
-  padding:10px 16px calc(10px + env(safe-area-inset-top)) 16px;
-  padding-top:calc(10px + env(safe-area-inset-top));
-}
-.hdr-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;max-width:var(--ih-content-width);margin:0 auto}
-.brand{display:flex;align-items:baseline;gap:8px;margin-right:auto;min-width:0}
-.brand h1{font-size:26px;line-height:30px;white-space:nowrap}
-.version{
-  font:500 12px/1 var(--ih-font-code);
-  color:var(--ih-text-secondary);
-  border:1px solid var(--ih-border);
-  border-radius:var(--ih-radius);
-  padding:3px 6px;letter-spacing:.02em;white-space:nowrap;
-}
-.hdr-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* ---------- Layout ---------- */
+.app{display:grid;grid-template-rows:var(--topbar-h) 1fr;height:100dvh;}
+.stage{position:relative;display:grid;grid-template-columns:1fr 0;transition:grid-template-columns .18s ease;min-height:0;}
+.stage.with-sidebar{grid-template-columns:1fr 360px;}
+#map{width:100%;height:100%;background:var(--ih-map-bg);}
 
-/* ---------- tabs ---------- */
-.tabs{
-  max-width:var(--ih-content-width);margin:0 auto;
-  display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;
-  padding-top:8px;
+/* ---------- Top bar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:var(--s3);padding:0 var(--s3);
+  background:var(--ih-sidebar);border-bottom:1px solid var(--ih-border);z-index:1200;
 }
-.tab{
-  appearance:none;background:transparent;border:0;border-bottom:3px solid transparent;
-  color:var(--ih-text-secondary);
-  font:600 14px/1 var(--ih-font-body);
-  padding:11px 14px;cursor:pointer;white-space:nowrap;min-height:40px;
-  border-radius:var(--ih-radius) var(--ih-radius) 0 0;
-}
-.tab:hover{background:var(--ih-surface-alt);color:var(--ih-text)}
-.tab[aria-selected="true"]{
-  color:var(--ih-primary);background:var(--ih-surface-selected);
-  border-bottom-color:var(--ih-marker);
-}
-main{max-width:var(--ih-content-width);margin:0 auto;padding:16px}
-.panel{
-  background:var(--ih-surface);border:1px solid var(--ih-border);
-  border-radius:var(--ih-radius);padding:14px;margin-bottom:14px;
-}
-.panel-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.panel-hd h3{flex:0 0 auto}
-.panel-sub{font-size:13px;color:var(--ih-text-secondary);margin:0}
-.panel-hd .spacer{margin-left:auto}
-.grid{display:grid;gap:14px}
-@media(min-width:900px){ .grid-2{grid-template-columns:1fr 1fr} }
+.brand{display:flex;align-items:center;gap:var(--s2);padding-right:var(--s3);border-right:1px solid var(--ih-divider);}
+.brand .mark{width:26px;height:26px;flex:none;color:var(--ih-primary);}
+.brand h1{font-size:20px;line-height:24px;white-space:nowrap;}
+.brand .sub{font-family:var(--font-mono);font-size:11px;line-height:16px;color:var(--ih-text-secondary);white-space:nowrap;}
 
-/* ---------- controls ---------- */
+.searchwrap{position:relative;flex:1 1 340px;max-width:420px;}
+.searchwrap .ic{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ih-text-secondary);pointer-events:none;}
+textarea{
+  width:100%;background:var(--ih-surface);border:1px solid var(--ih-border);border-radius:var(--r);
+  padding:7px 10px;font-family:var(--font-mono);font-size:12px;line-height:18px;
+  color:var(--ih-text);resize:vertical;
+}
+textarea:hover{border-color:var(--ih-primary-2);}
+textarea:focus{border-color:var(--ih-primary);}
+input[type="search"],input[type="text"],input[type="password"],input[type="number"],select{
+  width:100%;background:var(--ih-surface);border:1px solid var(--ih-border);border-radius:var(--r);
+  padding:7px 10px;line-height:20px;
+}
+input[type="search"]{padding-left:30px;}
+input:hover,select:hover{border-color:var(--ih-primary-2);}
+input:focus,select:focus{border-color:var(--ih-primary);}
+
+.statusbar{display:flex;align-items:center;gap:var(--s2);margin-left:auto;}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+  font-family:var(--font-mono);font-size:12px;line-height:18px;
+  border:1px solid var(--ih-border);background:var(--ih-surface);color:var(--ih-text);white-space:nowrap;
+}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ih-text-muted);flex:none;}
+.pill.ok{border-color:var(--ih-success);} .pill.ok .dot{background:var(--ih-success);}
+.pill.warn{border-color:var(--ih-warning);} .pill.warn .dot{background:var(--ih-warning);}
+.pill.err{border-color:var(--ih-error);} .pill.err .dot{background:var(--ih-error);}
+.pill.idle .dot{background:var(--ih-text-muted);}
+
 .btn{
-  appearance:none;font:500 14px/1 var(--ih-font-body);
-  border-radius:var(--ih-radius);border:1px solid var(--ih-border-control);
-  background:var(--ih-surface);color:var(--ih-text);
-  padding:0 14px;height:38px;min-height:38px;cursor:pointer;
-  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:6px;background:var(--ih-surface);color:var(--ih-text);
+  border:1px solid var(--ih-border);border-radius:var(--r);padding:6px 11px;cursor:pointer;font-weight:500;
 }
-.btn:hover{background:var(--ih-surface-alt)}
-.btn-primary{background:var(--ih-primary);border-color:var(--ih-primary);color:var(--ih-text-on-primary)}
-.btn-primary:hover{background:var(--ih-primary-hover);border-color:var(--ih-primary-hover)}
-.btn-signal{background:var(--ih-accent);border-color:var(--ih-accent);color:var(--ih-text-on-accent);font-weight:600}
-.btn-signal:hover{background:var(--ih-accent-hover);border-color:var(--ih-accent-hover)}
-.btn-danger{color:var(--ih-error-text);border-color:var(--ih-error-text)}
-.btn-danger:hover{background:var(--ih-error-soft)}
-.btn-sm{height:32px;min-height:32px;padding:0 10px;font-size:13px}
-.btn[disabled]{background:var(--ih-surface-alt);color:var(--ih-text-muted);border-color:var(--ih-border);cursor:not-allowed}
-select,input[type=text],input[type=number],input[type=date],textarea{
-  font:400 14px/1.4 var(--ih-font-body);
-  background:var(--ih-surface);color:var(--ih-text);
-  border:1px solid var(--ih-border-control);border-radius:var(--ih-radius);
-  padding:8px 9px;height:38px;width:100%;
+.btn:hover{background:var(--ih-surface-alt);border-color:var(--ih-primary-2);}
+.btn[aria-pressed="true"]{background:var(--ih-surface-selected);border-color:var(--ih-primary);color:var(--ih-text);}
+.btn.primary{background:var(--ih-primary-soft);border-color:var(--ih-primary);}
+.btn.accent{background:var(--ih-accent-soft);border-color:var(--ih-accent);}
+.btn.accent:hover{border-color:var(--ih-accent-hover);}
+.btn:disabled{cursor:not-allowed;background:var(--ih-surface);border-color:var(--ih-divider);color:var(--ih-text-muted);}
+.btn .i{width:16px;height:16px;flex:none;}
+.btn.icon{padding:6px;}
+
+/* ---------- Filter strip ---------- */
+.filters{
+  position:absolute;top:var(--s3);left:var(--s3);z-index:1000;
+  display:flex;flex-wrap:wrap;gap:var(--s2);align-items:flex-end;
+  background:var(--ih-scrim);border:1px solid var(--ih-border);border-radius:var(--r);
+  padding:var(--s3);box-shadow:var(--ih-shadow-float);max-width:min(760px,calc(100% - 24px));
+  backdrop-filter:blur(3px);
 }
-textarea{height:auto;min-height:110px;font-family:var(--ih-font-code);font-size:13px;resize:vertical}
-input::placeholder,textarea::placeholder{color:var(--ih-text-muted);opacity:1}
-label{font:600 13px/1.4 var(--ih-font-body);color:var(--ih-text);display:block;margin-bottom:5px}
-.field{margin-bottom:12px}
-.field-row{display:grid;gap:12px}
-@media(min-width:640px){.field-row{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}}
-.hint{font-size:13px;color:var(--ih-text-secondary);margin:4px 0 0}
+.filters.collapsed .fbody{display:none;}
+.fbody{display:flex;flex-wrap:wrap;gap:var(--s3);align-items:flex-end;}
+.field{display:flex;flex-direction:column;gap:var(--s1);min-width:132px;}
+.field label{font-size:13px;line-height:18px;font-weight:600;color:var(--ih-text-secondary);}
+.field select{padding:5px 8px;}
+.fhead{display:flex;align-items:center;gap:var(--s2);width:100%;}
+.fhead .t{font-family:var(--font-head);font-size:17px;line-height:21px;font-weight:600;}
+.fhead .count{font-family:var(--font-mono);font-size:12px;color:var(--ih-text-secondary);margin-left:auto;}
 
-/* ---------- KPI cards ---------- */
-.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:14px}
-.kpi{background:var(--ih-surface);border:1px solid var(--ih-border);border-radius:var(--ih-radius);padding:12px 14px}
-.kpi-label{font:600 11px/1.3 var(--ih-font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--ih-text-secondary);margin-bottom:6px}
-.kpi-value{font:700 30px/1.05 var(--ih-font-heading);color:var(--ih-text);font-variant-numeric:tabular-nums}
-.kpi-value.accent{color:var(--ih-accent)}
-.kpi-unit{font:500 13px/1 var(--ih-font-code);color:var(--ih-text-secondary);margin-left:5px}
-.kpi-foot{font-size:13px;color:var(--ih-text-secondary);margin-top:6px}
-.kpi-foot strong{color:var(--ih-text)}
-
-/* ---------- meters ---------- */
-.meter{margin-top:8px}
-.meter-track{height:10px;background:var(--ih-surface-alt);border:1px solid var(--ih-border-control);border-radius:999px;overflow:hidden}
-.meter-fill{height:100%;background:var(--ih-primary);border-radius:999px;transition:width .3s ease}
-.meter-fill.warn{background:var(--ih-warning)}
-.meter-fill.over{background:var(--ih-error)}
-.meter-cap{display:flex;justify-content:space-between;gap:8px;font:500 12px/1.4 var(--ih-font-code);color:var(--ih-text-secondary);margin-top:5px}
-
-/* ---------- badges ---------- */
-.badge{display:inline-flex;align-items:center;gap:5px;font:600 12px/1 var(--ih-font-body);padding:5px 9px;border-radius:999px;border:1px solid;white-space:nowrap}
-.badge-ok{color:var(--ih-success);border-color:var(--ih-success);background:var(--ih-success-soft)}
-.badge-warn{color:var(--ih-warning-text);border-color:var(--ih-warning-text);background:var(--ih-warning-soft)}
-.badge-err{color:var(--ih-error-text);border-color:var(--ih-error-text);background:var(--ih-error-soft)}
-.badge-info{color:var(--ih-primary);border-color:var(--ih-primary);background:var(--ih-primary-soft)}
-
-/* ---------- callouts ---------- */
-.callout{border-left:3px solid var(--ih-primary);background:var(--ih-primary-soft);padding:11px 13px;border-radius:var(--ih-radius);margin:0 0 14px;font-size:14px;color:var(--ih-text)}
-.callout.warn{border-left-color:var(--ih-accent);background:var(--ih-accent-soft)}
-.callout.err{border-left-color:var(--ih-error-text);background:var(--ih-error-soft)}
-.callout strong{font-weight:600}
-.callout p{margin:0 0 6px}
-.callout p:last-child{margin-bottom:0}
-
-/* ---------- charts ---------- */
-.chart-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-svg.chart{display:block;width:100%;height:auto;min-width:320px}
-.chart-readout{
-  font:500 13px/1.4 var(--ih-font-code);color:var(--ih-text);
-  background:var(--ih-surface-alt);border:1px solid var(--ih-border);
-  border-radius:var(--ih-radius);padding:7px 10px;margin-top:8px;min-height:32px;
+/* ---------- Sidebar ---------- */
+.sidebar{
+  background:var(--ih-sidebar);border-left:1px solid var(--ih-border);
+  overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:var(--s3);padding:var(--s4);
 }
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px}
-.legend-item{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ih-text);cursor:pointer;background:none;border:0;padding:3px 0;font-family:inherit}
-.legend-swatch{width:12px;height:12px;border-radius:2px;border:1px solid var(--ih-border-control);flex:0 0 auto}
-.legend-item[aria-pressed="false"]{color:var(--ih-text-muted);text-decoration:line-through}
-.axis-text{font:400 11px var(--ih-font-code);fill:var(--ih-text-secondary)}
-.axis-line{stroke:var(--ih-grid);stroke-width:1}
-.bar-hit{fill:transparent;cursor:pointer}
-.bar-hit:hover,.bar-hit:focus{fill:var(--ih-primary);fill-opacity:.10}
+.stage:not(.with-sidebar) .sidebar{display:none;}
+.card{background:var(--ih-surface);border:1px solid var(--ih-border);border-radius:var(--r);padding:var(--s4);box-shadow:var(--ih-shadow-card);}
+.card h2,.card h3{margin-bottom:var(--s3);}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);}
+.metric{background:var(--ih-surface-alt);border:1px solid var(--ih-divider);border-radius:var(--r);padding:var(--s2) var(--s3);}
+.metric .k{font-size:12px;line-height:17px;font-weight:600;color:var(--ih-text-secondary);text-transform:uppercase;letter-spacing:.4px;}
+.metric .v{font-family:var(--font-mono);font-size:19px;line-height:26px;font-weight:500;color:var(--ih-text);}
+.metric .u{font-size:12px;color:var(--ih-text-secondary);}
+.metric.hero{grid-column:span 2;border-left:3px solid var(--ih-primary);}
+.metric.hero.marine{border-left-color:var(--ih-accent);}
+.chartbox{position:relative;height:180px;}
+table.rank{width:100%;border-collapse:collapse;}
+table.rank th,table.rank td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--ih-divider);font-size:13px;line-height:19px;}
+table.rank th{font-weight:600;color:var(--ih-text);background:var(--ih-surface-alt);}
+table.rank td.n{font-family:var(--font-mono);text-align:right;}
+.empty{color:var(--ih-text-secondary);font-size:13px;line-height:19px;}
 
-/* ---------- tables ---------- */
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--ih-border);border-radius:var(--ih-radius)}
-table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
-th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--ih-divider)}
-thead th{background:var(--ih-surface-alt);font-weight:600;color:var(--ih-text);white-space:nowrap;position:sticky;top:0}
-td.num,th.num{text-align:right;font-family:var(--ih-font-code);font-variant-numeric:tabular-nums;white-space:nowrap}
-tbody tr:hover{background:var(--ih-surface-alt)}
-tbody tr:last-child td{border-bottom:0}
-tfoot td{font-weight:600;background:var(--ih-surface-alt);border-top:2px solid var(--ih-border)}
-.model-cell{font-family:var(--ih-font-code);font-size:13px}
+/* ---------- Settings drawer ---------- */
+.drawer{
+  position:fixed;inset:0 0 0 auto;width:min(440px,100%);background:var(--ih-sidebar);
+  border-left:1px solid var(--ih-border);box-shadow:var(--ih-shadow-float);z-index:2000;
+  transform:translateX(100%);transition:transform .18s ease;display:flex;flex-direction:column;
+}
+.drawer[data-open="true"]{transform:none;}
+.drawer header{display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s4);border-bottom:1px solid var(--ih-border);}
+.drawer .body{padding:var(--s4);overflow:auto;display:flex;flex-direction:column;gap:var(--s4);}
+fieldset{border:1px solid var(--ih-border);border-radius:var(--r);padding:var(--s3);margin:0;}
+legend{font-family:var(--font-head);font-size:17px;font-weight:600;padding:0 6px;}
+.row{display:flex;flex-direction:column;gap:var(--s1);margin-bottom:var(--s3);}
+.row:last-child{margin-bottom:0;}
+.row label{font-size:13px;line-height:18px;font-weight:600;}
+.row .hint{font-size:13px;line-height:19px;color:var(--ih-text-secondary);}
+.check{display:flex;gap:var(--s2);align-items:flex-start;}
+.check input{margin-top:4px;accent-color:var(--ih-primary);width:16px;height:16px;flex:none;}
+.callout{border:1px solid var(--ih-border);border-left:3px solid var(--ih-primary);border-radius:var(--r);
+  background:var(--ih-surface);padding:var(--s3);font-size:13px;line-height:20px;}
+.callout.warn{border-left-color:var(--ih-accent);}
+.callout strong{display:block;font-family:var(--font-head);font-size:15px;letter-spacing:.2px;margin-bottom:2px;}
+a{color:var(--ih-primary);}
+#diaglog{
+  margin:0;background:var(--ih-code-bg);color:var(--ih-code-text);
+  border:1px solid var(--ih-border);border-radius:var(--r);
+  padding:10px;font-family:var(--font-mono);font-size:12px;line-height:18px;
+  max-height:240px;overflow:auto;white-space:pre-wrap;word-break:break-word;
+}
+#diaglog:empty::before{content:"No entries yet.";color:#9AA6B4;}
 
-/* ---------- drop zone ---------- */
-.dropzone{
-  border:2px dashed var(--ih-border-control);border-radius:var(--ih-radius);
-  padding:26px 16px;text-align:center;background:var(--ih-surface-alt);
+/* ---------- Map chrome ---------- */
+.leaflet-container{background:var(--ih-map-bg);font-family:var(--font-body);}
+.leaflet-control-layers,.leaflet-bar a,.leaflet-control-attribution{
+  background:var(--ih-surface)!important;color:var(--ih-text)!important;border-color:var(--ih-border)!important;
 }
-.dropzone.hot{border-color:var(--ih-accent);background:var(--ih-accent-soft)}
-.dropzone h4{margin-bottom:6px}
-.dz-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
-.import-log{font:400 12px/1.5 var(--ih-font-code);background:var(--ih-code-bg);color:var(--ih-code-text);border-radius:var(--ih-radius);padding:10px 12px;max-height:170px;overflow:auto;margin-top:12px;white-space:pre-wrap}
+.leaflet-control-layers{border-radius:var(--r)!important;box-shadow:var(--ih-shadow-card)!important;padding:2px;}
+.leaflet-control-layers-expanded{padding:10px 12px;}
+.leaflet-control-layers label{font-size:13px;line-height:20px;}
+.leaflet-bar a{border-bottom-color:var(--ih-border)!important;}
+.leaflet-bar a:hover{background:var(--ih-surface-alt)!important;}
+.leaflet-control-attribution{font-size:11px;padding:1px 6px;}
+.leaflet-control-attribution a{color:var(--ih-primary)!important;}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{
+  background:var(--ih-surface);color:var(--ih-text);border:1px solid var(--ih-border);
+  border-radius:var(--r);box-shadow:var(--ih-shadow-float);
+}
+.leaflet-popup-content{margin:12px 14px;min-width:250px;}
+.leaflet-popup-close-button{color:var(--ih-text-secondary)!important;}
 
-/* ---------- empty state ---------- */
-.empty{text-align:center;padding:34px 16px;color:var(--ih-text-secondary)}
-.empty h3{color:var(--ih-text);margin-bottom:8px}
+.pop h3{margin:0 0 2px;}
+.pop .sub{font-family:var(--font-mono);font-size:12px;line-height:18px;color:var(--ih-text-secondary);margin-bottom:8px;}
+.pop dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0 0 10px;}
+.pop dt{font-size:12px;line-height:18px;font-weight:600;color:var(--ih-text-secondary);}
+.pop dd{margin:0;font-family:var(--font-mono);font-size:12px;line-height:18px;}
+.pop .acts{display:flex;gap:6px;flex-wrap:wrap;}
+.pop .acts .btn{padding:4px 8px;font-size:13px;}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 8px;font-size:12px;line-height:18px;font-weight:600;border:1px solid var(--ih-border);background:var(--ih-surface-alt);}
+.badge.demo{border-color:var(--ih-accent);background:var(--ih-accent-soft);color:var(--ih-text);}
 
-/* ---------- responsive ---------- */
-@media(max-width:760px){
-  main{padding:12px}
-  h1{font-size:24px;line-height:28px}
-  .brand h1{font-size:22px;line-height:26px}
-  .kpis{grid-template-columns:1fr 1fr;gap:10px}
-  .kpi-value{font-size:24px}
-  .panel{padding:12px}
-  .btn{height:44px;min-height:44px}
-  .btn-sm{height:38px;min-height:38px}
-  .tab{padding:12px 13px;min-height:44px}
-  select,input[type=text],input[type=number],input[type=date]{height:44px}
+/* vehicle markers */
+.veh{will-change:transform;}
+.veh svg{display:block;overflow:visible;}
+.veh .body{stroke:rgba(8,12,18,.85);stroke-width:1;}
+html[data-theme="light"] .veh .body{stroke:rgba(255,255,255,.9);}
+.veh.sel .halo{stroke:var(--ih-accent);stroke-width:2.5;fill:none;}
+.veh.demo .body{stroke-dasharray:2 2;}
+
+.legend{
+  position:absolute;left:var(--s3);bottom:26px;z-index:1000;background:var(--ih-scrim);
+  border:1px solid var(--ih-border);border-radius:var(--r);padding:var(--s2) var(--s3);
+  box-shadow:var(--ih-shadow-card);max-width:260px;backdrop-filter:blur(3px);
 }
-@media(max-width:420px){
-  .kpis{grid-template-columns:1fr}
+.legend h4{font-size:13px;line-height:18px;margin-bottom:4px;letter-spacing:.4px;text-transform:uppercase;}
+.legend ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:1px 10px;}
+.legend li{display:flex;align-items:center;gap:6px;font-size:12px;line-height:18px;color:var(--ih-text);}
+.legend .sw{width:10px;height:10px;border-radius:2px;flex:none;border:1px solid rgba(0,0,0,.4);}
+.legend.collapsed ul{display:none;}
+
+/* toasts */
+.toasts{position:fixed;right:var(--s4);bottom:var(--s4);z-index:3000;display:flex;flex-direction:column;gap:var(--s2);max-width:380px;}
+.toast{background:var(--ih-surface);border:1px solid var(--ih-border);border-left:3px solid var(--ih-primary);
+  border-radius:var(--r);padding:10px 12px;box-shadow:var(--ih-shadow-float);font-size:13px;line-height:20px;}
+.toast.warn{border-left-color:var(--ih-accent);}
+.toast.err{border-left-color:var(--ih-error);}
+.toast strong{display:block;font-family:var(--font-head);font-size:15px;}
+
+@media (max-width:1100px){
+  .stage.with-sidebar{grid-template-columns:1fr 320px;}
+  .brand .sub{font-size:10px;}
 }
-@media(prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+@media (max-width:820px){
+  .app{grid-template-rows:auto 1fr;}
+  .topbar{flex-wrap:wrap;padding:var(--s2);gap:var(--s2);}
+  .searchwrap{order:3;flex-basis:100%;max-width:none;}
+  .stage.with-sidebar{grid-template-columns:1fr;grid-template-rows:1fr 46%;}
+  .sidebar{border-left:none;border-top:1px solid var(--ih-border);}
+  .filters{left:var(--s2);top:var(--s2);right:var(--s2);max-width:none;}
+  .legend{display:none;}
 }
-@media print{
-  .app-header,.tabs,.hdr-actions,.btn,.dropzone{display:none !important}
-  body{background:#fff;color:#000}
-  .panel{border-color:#999;break-inside:avoid}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important;}
 }
 </style>
 </head>
 <body>
-<header class="app-header">
-  <div class="hdr-row">
+<div class="app">
+
+  <!-- ================= Top bar ================= -->
+  <header class="topbar">
     <div class="brand">
-      <h1>Token Ledger</h1>
-      <span class="version" data-version>v0.0.0</span>
-    </div>
-    <div class="hdr-actions">
-      <label class="sr-only" for="rangeSel">Date range</label>
-      <select id="rangeSel" style="width:auto">
-        <option value="1">Last 24 hours</option>
-        <option value="3">Last 3 days</option>
-        <option value="7" selected>Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="0">All time</option>
-      </select>
-      <label class="sr-only" for="provSel">Provider</label>
-      <select id="provSel" style="width:auto">
-        <option value="">All providers</option>
-      </select>
-      <button class="btn btn-sm" id="themeBtn" type="button" aria-label="Switch colour theme">Theme: Auto</button>
-    </div>
-  </div>
-  <nav class="tabs" role="tablist" aria-label="Sections">
-    <button class="tab" role="tab" id="tab-dash" aria-controls="view-dash" aria-selected="true" type="button">Dashboard</button>
-    <button class="tab" role="tab" id="tab-detail" aria-controls="view-detail" aria-selected="false" type="button">Breakdown</button>
-    <button class="tab" role="tab" id="tab-data" aria-controls="view-data" aria-selected="false" type="button">Import</button>
-    <button class="tab" role="tab" id="tab-budget" aria-controls="view-budget" aria-selected="false" type="button">Budgets</button>
-    <button class="tab" role="tab" id="tab-pricing" aria-controls="view-pricing" aria-selected="false" type="button">Pricing</button>
-    <button class="tab" role="tab" id="tab-about" aria-controls="view-about" aria-selected="false" type="button">About</button>
-  </nav>
-</header>
-
-<main>
-  <div id="storageWarn" class="callout err" hidden>
-    <p><strong>Persistence unavailable.</strong> This browser context blocks local storage, so imported data will vanish on reload. Save the file to disk and open it directly (or host it) for persistence. Use <strong>Export JSON</strong> on the Import tab to keep a copy either way.</p>
-  </div>
-
-  <!-- ================= DASHBOARD ================= -->
-  <section id="view-dash" role="tabpanel" aria-labelledby="tab-dash">
-    <div class="kpis" id="kpiGrid"></div>
-
-    <div class="panel">
-      <div class="panel-hd">
-        <h3>Tokens per Hour</h3>
-        <p class="panel-sub" id="hourlySub">Hourly totals across the selected range</p>
-        <span class="spacer"></span>
-        <label class="sr-only" for="hourlyMode">Stack by</label>
-        <select id="hourlyMode" class="btn-sm" style="width:auto;height:32px;padding:4px 8px">
-          <option value="type">Stack by token type</option>
-          <option value="provider">Stack by provider</option>
-          <option value="model">Stack by model</option>
-        </select>
-      </div>
-      <div class="chart-wrap"><svg class="chart" id="hourlyChart" role="img" aria-label="Token usage per hour"></svg></div>
-      <div class="chart-readout" id="hourlyReadout" role="status" aria-live="polite">Select or hover a bar for detail.</div>
-      <div class="legend" id="hourlyLegend"></div>
-    </div>
-
-    <div class="grid grid-2">
-      <div class="panel">
-        <div class="panel-hd"><h3>Daily Trend</h3><p class="panel-sub">Total tokens per day</p></div>
-        <div class="chart-wrap"><svg class="chart" id="dailyChart" role="img" aria-label="Token usage per day"></svg></div>
-        <div class="chart-readout" id="dailyReadout" role="status" aria-live="polite">Select or hover a bar for detail.</div>
-      </div>
-      <div class="panel">
-        <div class="panel-hd"><h3>Model Mix</h3><p class="panel-sub">Share of total tokens by model</p></div>
-        <div class="chart-wrap"><svg class="chart" id="modelChart" role="img" aria-label="Token usage by model"></svg></div>
-        <div class="chart-readout" id="modelReadout" role="status" aria-live="polite">Select or hover a bar for detail.</div>
+      <svg class="mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+        <path d="M12 2v20M2 12h20" opacity=".35"/><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
+      </svg>
+      <div>
+        <h1>Traffic Monitor</h1>
+        <div class="sub">AIR + MARINE · <span id="ver-brand">v0.0.0</span></div>
       </div>
     </div>
 
-    <div class="panel" id="emptyPanel" hidden>
-      <div class="empty">
-        <h3>No usage data yet</h3>
-        <p>Point the dashboard at your local agent logs, or load the sample data to see the layout.</p>
-        <div class="dz-actions">
-          <button class="btn btn-primary" type="button" data-goto="tab-data">Import data</button>
-          <button class="btn" type="button" id="demoBtn2">Load sample data</button>
+    <div class="searchwrap">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <label class="sr-only" for="q">Search by callsign, ICAO24, vessel name or MMSI</label>
+      <input id="q" type="search" placeholder="Search callsign / ICAO24 / vessel / MMSI…" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="statusbar">
+      <span class="pill idle" id="st-air" title="OpenSky air feed status"><span class="dot"></span><span class="lbl">AIR idle</span></span>
+      <span class="pill idle" id="st-sea" title="AISStream marine feed status"><span class="dot"></span><span class="lbl">SEA idle</span></span>
+      <button class="btn icon" id="btn-refresh" title="Refresh air traffic now" aria-label="Refresh air traffic now">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      </button>
+      <button class="btn icon" id="btn-theme" title="Toggle light / dark theme" aria-label="Toggle light or dark theme">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>
+      </button>
+      <button class="btn" id="btn-sidebar" aria-pressed="true" title="Toggle analytics sidebar">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M15 3v18"/></svg>
+        <span>Analytics</span>
+      </button>
+      <button class="btn accent" id="btn-settings" title="Open settings and API keys">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 7a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 17 4.6a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.9 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= Stage ================= -->
+  <div class="stage with-sidebar" id="stage">
+    <div style="position:relative;min-height:0;">
+      <div id="map" role="application" aria-label="Live air and marine traffic map"></div>
+
+      <!-- Filter panel -->
+      <section class="filters" id="filters" aria-label="Search and filter">
+        <div class="fhead">
+          <span class="t">Filters</span>
+          <span class="count" id="f-count">0 shown</span>
+          <button class="btn icon" id="btn-filters" aria-expanded="true" aria-controls="fbody" title="Collapse filters">
+            <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+        <div class="fbody" id="fbody">
+          <div class="field">
+            <label for="f-domain">Domain</label>
+            <select id="f-domain">
+              <option value="all">All traffic</option>
+              <option value="air">Aircraft only</option>
+              <option value="sea">Marine only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-subtype">Sub-type</label>
+            <select id="f-subtype"><option value="all">All sub-types</option></select>
+          </div>
+          <div class="field">
+            <label for="f-origin">Origin / departure</label>
+            <select id="f-origin"><option value="all">Any origin</option></select>
+          </div>
+          <div class="field">
+            <label for="f-dest">Destination</label>
+            <select id="f-dest"><option value="all">Any destination</option></select>
+          </div>
+          <div class="field" style="min-width:120px;">
+            <label for="f-ground">Movement</label>
+            <select id="f-ground">
+              <option value="all">Moving + stationary</option>
+              <option value="moving">Moving only</option>
+            </select>
+          </div>
+          <button class="btn" id="btn-clear" title="Reset all filters">Reset</button>
+        </div>
+      </section>
+
+      <!-- Legend -->
+      <aside class="legend" id="legend" aria-label="Marker colour legend">
+        <h4>Legend</h4>
+        <ul id="legend-list"></ul>
+      </aside>
+    </div>
+
+    <!-- ================= Analytics sidebar ================= -->
+    <aside class="sidebar" id="sidebar" aria-label="Analytics dashboard">
+      <div class="card">
+        <h2>Active Traffic</h2>
+        <div class="metrics">
+          <div class="metric hero"><div class="k">Aircraft tracked</div><div class="v" id="m-air">0</div></div>
+          <div class="metric hero marine"><div class="k">Vessels tracked</div><div class="v" id="m-sea">0</div></div>
+          <div class="metric"><div class="k">Avg ground speed</div><div class="v" id="m-spd">–<span class="u"> kn</span></div></div>
+          <div class="metric"><div class="k">Highest altitude</div><div class="v" id="m-alt">–<span class="u"> ft</span></div></div>
+          <div class="metric"><div class="k">Airborne / on ground</div><div class="v" id="m-airborne">–</div></div>
+          <div class="metric"><div class="k">Median vessel LOA</div><div class="v" id="m-loa">–<span class="u"> m</span></div></div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ================= BREAKDOWN ================= -->
-  <section id="view-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
-    <div class="panel">
-      <div class="panel-hd"><h3>By Model</h3><p class="panel-sub">Tokens and estimated cost for the selected range</p></div>
-      <div class="table-wrap"><table id="modelTable"><thead><tr>
-        <th scope="col">Model</th><th scope="col">Provider</th>
-        <th scope="col" class="num">Input</th><th scope="col" class="num">Cache write</th>
-        <th scope="col" class="num">Cache read</th><th scope="col" class="num">Output</th>
-        <th scope="col" class="num">Total</th><th scope="col" class="num">Est. cost</th>
-      </tr></thead><tbody></tbody><tfoot></tfoot></table></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-hd"><h3>By Source</h3><p class="panel-sub">Where the usage came from — surface, project or session</p></div>
-      <div class="table-wrap"><table id="sourceTable"><thead><tr>
-        <th scope="col">Source</th><th scope="col">Surface</th>
-        <th scope="col" class="num">Records</th><th scope="col" class="num">Total tokens</th>
-        <th scope="col" class="num">Est. cost</th><th scope="col">Last activity</th>
-      </tr></thead><tbody></tbody></table></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-hd">
-        <h3>Recent Activity</h3><p class="panel-sub">Most recent 100 records in range</p>
-        <span class="spacer"></span>
-        <button class="btn btn-sm" id="exportCsvBtn" type="button">Export CSV</button>
+      <div class="card">
+        <h3>Category breakdown</h3>
+        <div class="chartbox"><canvas id="c-cat" aria-label="Traffic by category" role="img"></canvas></div>
       </div>
-      <div class="table-wrap"><table id="recentTable"><thead><tr>
-        <th scope="col">When</th><th scope="col">Model</th><th scope="col">Source</th>
-        <th scope="col" class="num">In</th><th scope="col" class="num">Out</th>
-        <th scope="col" class="num">Cache</th><th scope="col" class="num">Total</th><th scope="col" class="num">Cost</th>
-      </tr></thead><tbody></tbody></table></div>
-    </div>
-  </section>
 
-  <!-- ================= IMPORT ================= -->
-  <section id="view-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+      <div class="card">
+        <h3>Sub-type distribution</h3>
+        <div class="chartbox" style="height:210px;"><canvas id="c-sub" aria-label="Traffic by sub-type" role="img"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3>Vessel length (LOA)</h3>
+        <div class="chartbox"><canvas id="c-loa" aria-label="Vessel length distribution" role="img"></canvas></div>
+        <p class="empty" id="loa-note">Requires AIS static data (vessel dimensions).</p>
+      </div>
+
+      <div class="card">
+        <h3>Top origins</h3>
+        <table class="rank"><thead><tr><th scope="col">Origin country / departure</th><th scope="col" class="n">Count</th></tr></thead><tbody id="t-origin"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>Top declared destinations</h3>
+        <table class="rank"><thead><tr><th scope="col">Destination (AIS)</th><th scope="col" class="n">Count</th></tr></thead><tbody id="t-dest"></tbody></table>
+        <p class="empty">OpenSky state vectors carry no destination field, so this table reflects AIS voyage data only.</p>
+      </div>
+
+      <div class="card">
+        <h3>Tracked breadcrumbs</h3>
+        <div id="track-list"><p class="empty">No breadcrumb tracks pinned. Open a vehicle pop-up and choose <em>Track</em>.</p></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= Settings drawer ================= -->
+<div class="drawer" id="drawer" data-open="false" role="dialog" aria-modal="false" aria-labelledby="drawer-t">
+  <header>
+    <h2 id="drawer-t">Settings &amp; Feeds</h2>
+    <span class="pill" id="ver-drawer" title="Deployed build">v0.0.0</span>
+    <button class="btn icon" id="btn-close-settings" style="margin-left:auto" aria-label="Close settings">
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </header>
+  <div class="body">
+
+    <div class="callout warn">
+      <strong>Credentials stay on this device</strong>
+      Keys are held in this browser's local storage only. They are never committed to the repository and never sent anywhere except the feed provider. Anyone using your deployed page must enter their own keys. Treat any key pasted into a browser page as semi-public — use a throwaway OpenSky API client, not your main account.
+    </div>
+
+    <fieldset>
+      <legend>Air traffic — OpenSky Network</legend>
+      <div class="row">
+        <label for="os-json">Import credentials.json</label>
+        <textarea id="os-json" rows="3" spellcheck="false" autocomplete="off"
+          placeholder='Paste the whole file, e.g. {"clientId":"…","clientSecret":"…"}'></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+          <button class="btn primary" id="btn-json-import">Fill fields from JSON</button>
+          <label class="btn" for="os-file" style="margin:0;">Choose file…</label>
+          <input id="os-file" type="file" accept=".json,application/json" class="sr-only">
+        </div>
+        <span class="hint" id="os-json-msg">This is the file OpenSky gave you when you created an API client. It fills the two fields below — but read the note underneath first.</span>
+      </div>
+
+      <div class="callout warn" style="margin-bottom:12px;">
+        <strong>Credentials alone will not fix a CORS failure</strong>
+        If diagnostics Step 1 reports <em>Failed to fetch</em>, the browser is blocked before any authentication happens. Entering these values changes nothing until a relay is deployed. The better destination for this file is the Worker, as encrypted secrets — see section 2 of the README.
+      </div>
+
+      <div class="row">
+        <label for="os-id">OAuth2 client ID</label>
+        <input id="os-id" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. ihay-api-client">
+        <span class="hint">Optional. Leave both fields blank for anonymous access (heavily rate-limited).</span>
+      </div>
+      <div class="row">
+        <label for="os-secret">OAuth2 client secret</label>
+        <input id="os-secret" type="password" autocomplete="off" spellcheck="false" placeholder="client secret">
+      </div>
+      <div class="row">
+        <label for="os-interval">Polling interval (seconds)</label>
+        <input id="os-interval" type="number" min="5" max="600" step="1" value="15">
+        <span class="hint">Minimum 5 s. Automatic back-off doubles this on HTTP 429 until the limit clears.</span>
+      </div>
+      <div class="row check">
+        <input id="os-bbox" type="checkbox" checked>
+        <label for="os-bbox">Restrict requests to the current map view<br><span class="hint">Strongly recommended — a bounding box costs far fewer daily credits than a global request.</span></label>
+      </div>
+      <div class="row check">
+        <input id="os-enabled" type="checkbox" checked>
+        <label for="os-enabled">Air feed enabled</label>
+      </div>
+      <div class="row" style="border:1px solid var(--ih-accent);border-radius:var(--r);padding:12px;background:var(--ih-surface-alt);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <label for="os-proxy" style="margin:0;">Relay URL (Cloudflare Worker) — required</label>
+          <span class="pill err" id="relay-state" style="margin-left:auto;"><span class="dot"></span><span class="lbl">not set</span></span>
+        </div>
+        <input id="os-proxy" type="text" autocomplete="off" spellcheck="false"
+               placeholder="https://hello-world.yourname.workers.dev">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+          <button class="btn accent" id="btn-relay-test">Test relay now</button>
+          <button class="btn" id="btn-relay-clear">Clear</button>
+        </div>
+        <span class="hint" id="relay-msg">Paste the Worker URL. The <code>/?url=</code> suffix is added automatically if you leave it off. Nothing else on this page will make the air feed work.</span>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Marine traffic — AISStream.io</legend>
+      <div class="row">
+        <label for="ais-key">API key</label>
+        <input id="ais-key" type="password" autocomplete="off" spellcheck="false" placeholder="aisstream.io API key">
+        <span class="hint">Free key from aisstream.io. Without it, no live marine data can be received.</span>
+      </div>
+      <div class="row check">
+        <input id="ais-viewport" type="checkbox" checked>
+        <label for="ais-viewport">Subscribe to the current map view<br><span class="hint">AIS subscriptions are fixed at connection time. Use <em>Re-subscribe</em> after panning.</span></label>
+      </div>
+      <div class="row check">
+        <input id="ais-enabled" type="checkbox">
+        <label for="ais-enabled">Marine feed enabled</label>
+      </div>
+      <div class="row" style="flex-direction:row;gap:8px;">
+        <button class="btn primary" id="btn-ais-reconnect">Re-subscribe to view</button>
+        <button class="btn" id="btn-ais-stop">Disconnect</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Display &amp; performance</legend>
+      <div class="row">
+        <label for="cap">Maximum rendered markers</label>
+        <input id="cap" type="number" min="100" max="6000" step="100" value="900">
+        <span class="hint">Nearest-to-centre markers are drawn first. Filters still count all traffic.</span>
+      </div>
+      <div class="row">
+        <label for="stale">Drop stale targets after (seconds)</label>
+        <input id="stale" type="number" min="30" max="3600" step="10" value="180">
+      </div>
+      <div class="row">
+        <label for="trail">Breadcrumb points per track</label>
+        <input id="trail" type="number" min="10" max="1000" step="10" value="240">
+      </div>
+      <div class="row check">
+        <input id="demo" type="checkbox">
+        <label for="demo">Enable synthetic demo vessels<br><span class="hint">Simulated, not real. Every demo target is flagged <span class="badge demo">DEMO</span> in its pop-up and drawn with a dashed outline. Use only for UI testing without an AIS key.</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Diagnostics</legend>
+      <p class="hint" style="margin:0 0 10px;">Runs a sequence of isolated requests and reports exactly which one fails. Start here when the map is empty.</p>
+      <div class="row" style="flex-direction:row;gap:8px;flex-wrap:wrap;">
+        <button class="btn primary" id="btn-diag">Run diagnostics</button>
+        <button class="btn" id="btn-diag-copy">Copy log</button>
+        <button class="btn" id="btn-diag-clear">Clear</button>
+      </div>
+      <pre id="diaglog" tabindex="0" aria-label="Diagnostic log"></pre>
+    </fieldset>
+
     <div class="callout">
-      <p><strong>Everything stays on this machine.</strong> Files are parsed in the browser and nothing is uploaded. There is no server and no network call in this page apart from the web font.</p>
+      <strong>Data attribution</strong>
+      Air traffic: OpenSky Network state vectors, CC BY-SA 4.0 for research/non-commercial use. Marine traffic: AISStream.io relay of terrestrial AIS receivers — coverage is coastal and incomplete. Basemaps © OpenStreetMap contributors, © CARTO, and Esri/Maxar as attributed on the map.
     </div>
+  </div>
+</div>
 
-    <div class="panel">
-      <div class="panel-hd"><h3>Import Agent Logs</h3><p class="panel-sub">Claude Code, Codex, Gemini CLI and similar tools write token counts to disk. Point at that folder.</p></div>
-      <div class="dropzone" id="dropzone">
-        <h4>Drop a folder or files here</h4>
-        <p class="hint">Accepts <span class="mono">.jsonl</span>, <span class="mono">.json</span> and <span class="mono">.csv</span>. Re-importing is safe — duplicate records are skipped.</p>
-        <div class="dz-actions">
-          <button class="btn btn-primary" type="button" id="pickFolderBtn">Choose folder</button>
-          <button class="btn" type="button" id="pickFilesBtn">Choose files</button>
-          <button class="btn" type="button" id="demoBtn">Load sample data</button>
-        </div>
-        <input type="file" id="folderInput" webkitdirectory directory multiple class="sr-only" tabindex="-1" aria-hidden="true">
-        <input type="file" id="filesInput" multiple accept=".jsonl,.json,.csv,.txt" class="sr-only" tabindex="-1" aria-hidden="true">
-      </div>
-      <div class="import-log" id="importLog" role="status" aria-live="polite">Ready.</div>
-      <details style="margin-top:12px">
-        <summary style="cursor:pointer;font-weight:600;font-size:14px;padding:6px 0">Where are the log files?</summary>
-        <div class="table-wrap" style="margin-top:8px"><table><thead><tr>
-          <th scope="col">Tool</th><th scope="col">Path</th></tr></thead><tbody>
-          <tr><td>Claude Code</td><td class="mono">~/.claude/projects/</td></tr>
-          <tr><td>Claude Code (Windows)</td><td class="mono">%USERPROFILE%\.claude\projects\</td></tr>
-          <tr><td>OpenAI Codex CLI</td><td class="mono">~/.codex/sessions/</td></tr>
-          <tr><td>Gemini CLI</td><td class="mono">~/.gemini/tmp/</td></tr>
-        </tbody></table></div>
-        <p class="hint">On Windows, paste the path into the file dialog's address bar — hidden dot-folders are not shown in the browser sidebar.</p>
-      </details>
-    </div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
-    <div class="panel">
-      <div class="panel-hd"><h3>Paste or Log Manually</h3><p class="panel-sub">For chat sessions and anything without a local log file</p></div>
-      <div class="field">
-        <label for="pasteBox">Paste JSON, JSONL or CSV</label>
-        <textarea id="pasteBox" placeholder='{"timestamp":"2026-08-01T09:15:00Z","model":"claude-opus-5","usage":{"input_tokens":1200,"output_tokens":800}}'></textarea>
-        <p class="hint">CSV needs a header row. Recognised columns: timestamp, model, provider, input, output, cache_read, cache_write, source, surface.</p>
-      </div>
-      <button class="btn btn-primary" type="button" id="pasteBtn">Parse and add</button>
-
-      <hr style="border:0;border-top:1px solid var(--ih-divider);margin:18px 0">
-
-      <h4 style="margin-bottom:10px">Quick manual entry</h4>
-      <div class="field-row">
-        <div class="field"><label for="mModel">Model</label><input type="text" id="mModel" list="modelList" placeholder="claude-opus-5"><datalist id="modelList"></datalist></div>
-        <div class="field"><label for="mSurface">Surface</label><input type="text" id="mSurface" placeholder="chat" value="chat"></div>
-        <div class="field"><label for="mIn">Input tokens</label><input type="number" id="mIn" min="0" step="1" placeholder="0"></div>
-        <div class="field"><label for="mOut">Output tokens</label><input type="number" id="mOut" min="0" step="1" placeholder="0"></div>
-        <div class="field"><label for="mWhen">When</label><input type="text" id="mWhen" placeholder="now — or 2026-08-01T09:15"></div>
-      </div>
-      <button class="btn btn-primary" type="button" id="manualBtn">Add record</button>
-      <p class="hint" id="manualMsg"></p>
-    </div>
-
-    <div class="panel">
-      <div class="panel-hd"><h3>Data Management</h3><p class="panel-sub" id="dataStats">No records stored.</p></div>
-      <div class="dz-actions" style="justify-content:flex-start">
-        <button class="btn" type="button" id="exportJsonBtn">Export JSON backup</button>
-        <button class="btn" type="button" id="importJsonBtn">Restore backup</button>
-        <button class="btn btn-danger" type="button" id="clearBtn">Delete all records</button>
-        <input type="file" id="restoreInput" accept=".json" class="sr-only" tabindex="-1" aria-hidden="true">
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= BUDGETS ================= -->
-  <section id="view-budget" role="tabpanel" aria-labelledby="tab-budget" hidden>
-    <div class="callout warn">
-      <p><strong>"Tokens remaining" is your number, not the provider's.</strong> No consumer plan exposes a live quota over an API, so the dashboard cannot read one. Set the caps you want to work to below and it will track the burn-down against them.</p>
-    </div>
-    <div class="panel">
-      <div class="panel-hd"><h3>Caps and Budgets</h3><p class="panel-sub">Leave a field blank or zero to hide that meter</p></div>
-      <div class="field-row">
-        <div class="field"><label for="bWindowHrs">Rolling window (hours)</label><input type="number" id="bWindowHrs" min="1" max="168" step="1"><p class="hint">Claude Pro and Max limits reset on a rolling window — 5 hours is the usual figure.</p></div>
-        <div class="field"><label for="bWindowTok">Window token cap</label><input type="number" id="bWindowTok" min="0" step="1000"><p class="hint">Your own estimate of what the window allows.</p></div>
-        <div class="field"><label for="bWeekTok">Weekly token cap</label><input type="number" id="bWeekTok" min="0" step="1000"></div>
-        <div class="field"><label for="bMonthTok">Monthly token cap</label><input type="number" id="bMonthTok" min="0" step="1000"></div>
-        <div class="field"><label for="bMonthCost">Monthly spend cap (AUD)</label><input type="number" id="bMonthCost" min="0" step="1"></div>
-        <div class="field"><label for="bCurrency">Currency label</label><input type="text" id="bCurrency" maxlength="6" placeholder="AUD"></div>
-      </div>
-      <button class="btn btn-primary" type="button" id="saveBudgetBtn">Save budgets</button>
-      <p class="hint" id="budgetMsg"></p>
-    </div>
-    <div class="panel">
-      <div class="panel-hd"><h3>Current Position</h3><p class="panel-sub">Live burn-down against each cap</p></div>
-      <div id="budgetMeters"></div>
-    </div>
-  </section>
-
-  <!-- ================= PRICING ================= -->
-  <section id="view-pricing" role="tabpanel" aria-labelledby="tab-pricing" hidden>
-    <div class="callout warn">
-      <p><strong>Verify these rates before trusting the cost column.</strong> The seeded values are placeholders in USD per million tokens and will drift as providers change pricing. Edit any cell; a model that matches no rule falls back to the default row and is flagged in the tables.</p>
-    </div>
-    <div class="panel">
-      <div class="panel-hd">
-        <h3>Rate Card</h3><p class="panel-sub">Matched by substring against the model name, first match wins</p>
-        <span class="spacer"></span>
-        <button class="btn btn-sm btn-primary" type="button" id="addRateBtn">Add row</button>
-      </div>
-      <div class="table-wrap"><table id="rateTable"><thead><tr>
-        <th scope="col">Match</th><th scope="col">Provider</th>
-        <th scope="col" class="num">Input /Mtok</th><th scope="col" class="num">Output /Mtok</th><th scope="col"></th>
-      </tr></thead><tbody></tbody></table></div>
-      <div class="field-row" style="margin-top:14px">
-        <div class="field"><label for="cwMult">Cache-write multiplier</label><input type="number" id="cwMult" min="0" step="0.05"><p class="hint">Applied to the input rate. Anthropic's 5-minute cache write is typically 1.25×.</p></div>
-        <div class="field"><label for="crMult">Cache-read multiplier</label><input type="number" id="crMult" min="0" step="0.01"><p class="hint">Applied to the input rate. Cache reads are typically 0.1×.</p></div>
-        <div class="field"><label for="fxRate">USD → display currency</label><input type="number" id="fxRate" min="0" step="0.01"><p class="hint">Set to 1 to keep costs in USD.</p></div>
-      </div>
-      <button class="btn btn-primary" type="button" id="saveRatesBtn">Save rate card</button>
-      <p class="hint" id="rateMsg"></p>
-    </div>
-  </section>
-
-  <!-- ================= ABOUT ================= -->
-  <section id="view-about" role="tabpanel" aria-labelledby="tab-about" hidden>
-    <div class="panel" style="max-width:820px">
-      <div class="panel-hd"><h3>What this can and cannot see</h3></div>
-      <h4 style="margin:14px 0 6px">Reliable</h4>
-      <p style="margin:0 0 10px">Agent CLI tools write a token count to disk for every assistant turn. Claude Code stores one JSONL transcript per session under <span class="mono">~/.claude/projects/</span>, and each assistant record carries input, output, cache-write and cache-read counts along with the model name and timestamp. This happens on API, Pro and Max plans alike. That is the data behind every chart here.</p>
-      <h4 style="margin:14px 0 6px">Approximate</h4>
-      <p style="margin:0 0 10px">Costs are calculated from the editable rate card on the Pricing tab, not from provider billing. Treat them as an estimate for comparison, not reconciliation. There are also known cases of the local JSONL counts diverging from what the provider bills, so the totals are best read as a trend rather than an invoice.</p>
-      <h4 style="margin:14px 0 6px">Not available</h4>
-      <p style="margin:0 0 10px">Browser chat sessions on Claude, ChatGPT and Gemini publish no token counts at all, so they have to be entered by hand. Anthropic's Usage and Cost Admin API needs an <span class="mono">sk-ant-admin</span> key and an organisation account — ordinary API keys have no access to usage endpoints, and a static page could not call it cross-origin regardless. Consumer plan quota percentages are not exposed anywhere, which is why the Budgets tab asks you to define your own caps.</p>
-      <h4 style="margin:14px 0 6px">Adding another provider</h4>
-      <p style="margin:0 0 10px">The parser sniffs each record for a usage object rather than matching a fixed schema, so it already understands Anthropic's <span class="mono">input_tokens</span> shape, OpenAI's <span class="mono">prompt_tokens</span> shape and Gemini's <span class="mono">promptTokenCount</span> shape wherever they are nested. Any new tool writing one of those three will import without a code change. Add a matching row on the Pricing tab to get costs.</p>
-      <p class="hint" style="margin-top:16px">Token Ledger <span class="mono" data-version></span> — single file, no dependencies, no network calls beyond the web font.</p>
-    </div>
-  </section>
-</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-/* ===================== Token Ledger ===================== */
-const APP_VERSION = '0.1.0';
-const APP_NAME = 'Token Ledger';
+"use strict";
+/* ==========================================================================
+   Situational Traffic Monitor
+   Vanilla ES6+, no build step, no backend. Modules are IIFE-scoped sections.
+   ========================================================================== */
 
-/* ---------- storage shim: real localStorage, else memory ---------- */
+/* -------------------------------------------------------------------------
+   0. Small utilities
+   ------------------------------------------------------------------------- */
+/* Build identity. Bump APP_VERSION on every deploy so the running page can be
+   distinguished from a cached one. */
+const APP_VERSION = '1.4.0';
+const APP_BUILD   = '2026-08-01';
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const nowSec = () => Date.now() / 1000;
+
 const Store = (() => {
-  let ok = true, mem = {};
-  try { const k='__tl__'; localStorage.setItem(k,'1'); localStorage.removeItem(k); }
-  catch(e){ ok = false; }
+  // localStorage can throw in sandboxed iframes; fall back to memory.
+  const mem = new Map();
+  let ok = true;
+  try { const k = '__t'; localStorage.setItem(k, '1'); localStorage.removeItem(k); }
+  catch (e) { ok = false; }
   return {
-    ok,
-    get(k){ try { return ok ? localStorage.getItem(k) : (mem[k] ?? null); } catch(e){ return mem[k] ?? null; } },
-    set(k,v){ try { if(ok) localStorage.setItem(k,v); else mem[k]=v; return true; }
-              catch(e){ mem[k]=v; return false; } },
-    del(k){ try { if(ok) localStorage.removeItem(k); else delete mem[k]; } catch(e){ delete mem[k]; } }
+    get(k, d) {
+      try { const v = ok ? localStorage.getItem(k) : (mem.has(k) ? mem.get(k) : null);
+            return v === null ? d : JSON.parse(v); }
+      catch (e) { return d; }
+    },
+    set(k, v) {
+      try { const s = JSON.stringify(v); if (ok) localStorage.setItem(k, s); else mem.set(k, s); }
+      catch (e) { /* quota or blocked — non-fatal */ }
+    }
   };
 })();
 
-const K_REC='tl.records.v1', K_SET='tl.settings.v1', K_RATE='tl.rates.v1';
+const KEY = 'stm.settings.v1';
+const DEFAULTS = {
+  osId: '', osSecret: '', osInterval: 15, osBbox: true, osEnabled: true, osProxy: '',
+  aisKey: '', aisViewport: true, aisEnabled: false,
+  cap: 900, stale: 180, trail: 240, demo: false,
+  theme: 'dark', sidebar: true, basemap: 'Dark Matter'
+};
+let S = Object.assign({}, DEFAULTS, Store.get(KEY, {}));
+const saveSettings = () => Store.set(KEY, S);
 
-/* ---------- defaults ---------- */
-const DEFAULT_RATES = [
-  { match:'opus',    provider:'anthropic', in:15,   out:75 },
-  { match:'fable',   provider:'anthropic', in:15,   out:75 },
-  { match:'mythos',  provider:'anthropic', in:15,   out:75 },
-  { match:'sonnet',  provider:'anthropic', in:3,    out:15 },
-  { match:'haiku',   provider:'anthropic', in:1,    out:5  },
-  { match:'gpt-5',   provider:'openai',    in:1.25, out:10 },
-  { match:'codex',   provider:'openai',    in:1.25, out:10 },
-  { match:'o3',      provider:'openai',    in:2,    out:8  },
-  { match:'gpt',     provider:'openai',    in:2.5,  out:10 },
-  { match:'flash',   provider:'google',    in:0.3,  out:2.5},
-  { match:'gemini',  provider:'google',    in:1.25, out:10 },
-  { match:'*',       provider:'other',     in:3,    out:15 }
+function toast(title, msg, kind) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' ' + kind : '');
+  const t = document.createElement('strong'); t.textContent = title;
+  el.appendChild(t);
+  el.appendChild(document.createTextNode(msg || ''));
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 7000);
+}
+/* Diagnostic log — every feed event is recorded so failures are visible
+   without opening dev tools. */
+const Log = (() => {
+  const lines = [];
+  function add(kind, msg) {
+    const t = new Date().toLocaleTimeString('en-AU', { hour12: false });
+    lines.push({ t, kind, msg: String(msg) });
+    if (lines.length > 200) lines.shift();
+    paint();
+  }
+  function paint() {
+    const box = document.getElementById('diaglog');
+    if (!box) return;
+    box.textContent = lines.map(l => l.t + '  [' + l.kind.toUpperCase() + '] ' + l.msg).join('\n');
+    box.scrollTop = box.scrollHeight;
+  }
+  const text = () => lines.map(l => l.t + ' [' + l.kind + '] ' + l.msg).join('\n');
+  return { add, paint, text };
+})();
+
+function setStatus(id, kind, label) {
+  const el = $(id);
+  el.className = 'pill ' + kind;
+  $('.lbl', el).textContent = label;
+}
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const MS_TO_KN = 1.943844;
+const M_TO_FT  = 3.280839895;
+const fmt = (v, d = 0) => (v === null || v === undefined || Number.isNaN(v)) ? '–' : Number(v).toFixed(d);
+
+/* -------------------------------------------------------------------------
+   1. Classification tables (colour + sub-type)
+   ------------------------------------------------------------------------- */
+const PALETTE = {
+  dark:  { blue:'#7EA8F2', blue2:'#537DC5', orange:'#F29B4B', green:'#7BBA94',
+           steel:'#9CB6DB', ochre:'#D8B35E', brick:'#E07A74', grey:'#9AA6B4' },
+  light: { blue:'#24529A', blue2:'#385F9E', orange:'#D87822', green:'#3E745A',
+           steel:'#5D78A4', ochre:'#B88A2A', brick:'#B34F4A', grey:'#5F6976' }
+};
+const pal = () => PALETTE[document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'];
+
+// OpenSky "category" field (index 17, extended=1)
+const AIR_CATS = {
+  2:'Light aircraft', 3:'Small aircraft', 4:'Large aircraft', 5:'High-vortex large',
+  6:'Heavy aircraft', 7:'High performance', 8:'Rotorcraft', 9:'Glider',
+  10:'Lighter-than-air', 11:'Parachutist', 12:'Ultralight', 14:'UAV', 15:'Space vehicle',
+  16:'Surface emergency', 17:'Surface service'
+};
+function airSubtype(st) {
+  const c = st.cat;
+  if (AIR_CATS[c]) return AIR_CATS[c];
+  if (st.onGround) return 'On ground (uncategorised)';
+  return 'Uncategorised';
+}
+function airColour(st) {
+  const p = pal(), c = st.cat;
+  if (st.onGround) return p.grey;
+  if (c === 8) return p.green;                       // rotorcraft
+  if (c === 9 || c === 10 || c === 11 || c === 12) return p.ochre; // sport / light
+  if (c === 14) return p.brick;                      // UAV
+  if (c === 5 || c === 6) return p.orange;           // heavy
+  if (c === 4) return p.blue;                        // large commercial
+  if (c === 2 || c === 3) return p.steel;            // general aviation
+  return p.blue2;
+}
+
+// AIS ship-and-cargo type codes
+function seaSubtype(t) {
+  if (t == null) return 'Unknown vessel';
+  if (t >= 20 && t <= 29) return 'WIG craft';
+  if (t === 30) return 'Fishing';
+  if (t === 31 || t === 32) return 'Towing';
+  if (t === 33) return 'Dredger';
+  if (t === 34) return 'Diving ops';
+  if (t === 35) return 'Military ops';
+  if (t === 36) return 'Sailing';
+  if (t === 37) return 'Pleasure craft';
+  if (t >= 40 && t <= 49) return 'High-speed craft';
+  if (t === 50) return 'Pilot vessel';
+  if (t === 51) return 'Search & rescue';
+  if (t === 52) return 'Tug';
+  if (t === 53) return 'Port tender';
+  if (t === 55) return 'Law enforcement';
+  if (t === 58) return 'Medical transport';
+  if (t >= 50 && t <= 59) return 'Special craft';
+  if (t >= 60 && t <= 69) return 'Passenger vessel';
+  if (t >= 70 && t <= 79) return 'Cargo vessel';
+  if (t >= 80 && t <= 89) return 'Tanker';
+  if (t >= 90 && t <= 99) return 'Other';
+  return 'Unknown vessel';
+}
+function seaColour(t) {
+  const p = pal();
+  if (t == null) return p.grey;
+  if (t >= 80 && t <= 89) return p.brick;   // tanker
+  if (t >= 70 && t <= 79) return p.ochre;   // cargo
+  if (t >= 60 && t <= 69) return p.orange;  // passenger
+  if (t === 30) return p.green;             // fishing
+  if (t === 52 || t === 31 || t === 32) return p.steel;
+  if (t >= 40 && t <= 49) return p.blue;    // HSC
+  return p.blue2;
+}
+
+const LEGEND = [
+  ['Large commercial', () => pal().blue],
+  ['Heavy aircraft',   () => pal().orange],
+  ['General aviation', () => pal().steel],
+  ['Rotorcraft',       () => pal().green],
+  ['Tanker',           () => pal().brick],
+  ['Cargo vessel',     () => pal().ochre],
+  ['Passenger vessel', () => pal().orange],
+  ['On ground / moored', () => pal().grey]
 ];
-const DEFAULT_SETTINGS = {
-  theme:'auto', range:7, provider:'', hourlyMode:'type',
-  windowHrs:5, windowTok:0, weekTok:0, monthTok:0, monthCost:0,
-  currency:'AUD', fx:1.5, cwMult:1.25, crMult:0.1
+function drawLegend() {
+  const ul = $('#legend-list'); ul.innerHTML = '';
+  LEGEND.forEach(([label, colour]) => {
+    const li = document.createElement('li');
+    const sw = document.createElement('span');
+    sw.className = 'sw'; sw.style.background = colour();
+    li.appendChild(sw);
+    li.appendChild(document.createTextNode(label));
+    ul.appendChild(li);
+  });
+}
+
+/* -------------------------------------------------------------------------
+   2. Map + basemaps
+   ------------------------------------------------------------------------- */
+const map = L.map('map', {
+  center: [-31.98, 115.86],   // Perth, Western Australia
+  zoom: 7, zoomControl: true, worldCopyJump: true, preferCanvas: false
+});
+map.attributionControl.setPrefix('');
+
+const basemaps = {
+  'OpenStreetMap': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }),
+  'Dark Matter': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20, subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }),
+  'Positron (light)': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20, subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }),
+  'Esri World Imagery': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics'
+  })
 };
+(basemaps[S.basemap] || basemaps['Dark Matter']).addTo(map);
+L.control.layers(basemaps, null, { position: 'topright', collapsed: true }).addTo(map);
+map.on('baselayerchange', e => { S.basemap = e.name; saveSettings(); });
 
-/* ---------- state ---------- */
-let RECORDS = [];              // {ts,provider,model,surface,source,i,o,cr,cw,subset}
-let SETTINGS = {...DEFAULT_SETTINGS};
-let RATES = DEFAULT_RATES.map(r=>({...r}));
-let SEEN = new Set();
-let hiddenSeries = new Set();
+const trackLayer  = L.layerGroup().addTo(map);
+const markerLayer = L.layerGroup().addTo(map);
 
-/* ---------- utils ---------- */
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+/* -------------------------------------------------------------------------
+   3. Target store
+   Unified record:
+   { id, domain:'air'|'sea', name, sub, colour, lat, lon, hdg, sogKn, altFt,
+     origin, dest, meta{}, ts, demo, history:[[lat,lon,ts]] }
+   ------------------------------------------------------------------------- */
+const targets = new Map();
+const tracked = new Set();     // ids with pinned breadcrumbs
+let selectedId = null;
 
-function fmtTok(n){
-  n = Number(n)||0;
-  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
-  if (n >= 1e6) return (n/1e6).toFixed(n/1e6 >= 100 ? 0 : 2)+'M';
-  if (n >= 1e3) return (n/1e3).toFixed(n/1e3 >= 100 ? 0 : 1)+'k';
-  return String(Math.round(n));
-}
-const fmtInt = n => (Math.round(Number(n)||0)).toLocaleString('en-AU');
-function fmtMoney(n){
-  n = Number(n)||0;
-  const c = SETTINGS.currency || 'AUD';
-  if (Math.abs(n) < 10) return c+' '+n.toFixed(2);
-  return c+' '+n.toLocaleString('en-AU',{maximumFractionDigits:0});
-}
-function fmtHour(ts){
-  const d = new Date(ts);
-  return d.toLocaleString('en-AU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false});
-}
-const fmtDay = ts => new Date(ts).toLocaleDateString('en-AU',{day:'2-digit',month:'short'});
-function fmtAgo(ts){
-  const s = (Date.now()-ts)/1000;
-  if (s < 60) return 'just now';
-  if (s < 3600) return Math.floor(s/60)+' min ago';
-  if (s < 86400) return Math.floor(s/3600)+' hr ago';
-  return Math.floor(s/86400)+' days ago';
-}
-const hourKey = ts => { const d=new Date(ts); d.setMinutes(0,0,0); return d.getTime(); };
-const dayKey  = ts => { const d=new Date(ts); d.setHours(0,0,0,0); return d.getTime(); };
-const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function cssVar(name){
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888';
-}
-const chartColour = i => cssVar('--ih-chart-'+((i%6)+1));
-
-/* ---------- pricing ---------- */
-function rateFor(model){
-  const m = String(model||'').toLowerCase();
-  for (const r of RATES){
-    if (r.match === '*') continue;
-    if (m.includes(String(r.match).toLowerCase())) return r;
-  }
-  return RATES.find(r=>r.match==='*') || {match:'*',provider:'other',in:3,out:15};
-}
-const isPriced = model => {
-  const m = String(model||'').toLowerCase();
-  return RATES.some(r => r.match!=='*' && m.includes(String(r.match).toLowerCase()));
-};
-function costOf(r){
-  const rate = rateFor(r.model);
-  const cwM = Number(SETTINGS.cwMult)||0, crM = Number(SETTINGS.crMult)||0;
-  let usd;
-  if (r.subset){
-    const fresh = Math.max(0, r.i - r.cr);
-    usd = (fresh*rate.in + r.cr*rate.in*crM + r.o*rate.out) / 1e6;
+function upsert(rec) {
+  const prev = targets.get(rec.id);
+  if (prev) {
+    // preserve breadcrumb history and merged static metadata
+    rec.history = prev.history;
+    rec.meta = Object.assign({}, prev.meta, rec.meta);
+    if (rec.name == null) rec.name = prev.name;
+    if (rec.sub == null || rec.sub === 'Unknown vessel') rec.sub = prev.sub || rec.sub;
+    if (rec.dest == null) rec.dest = prev.dest;
+    if (rec.origin == null) rec.origin = prev.origin;
   } else {
-    usd = (r.i*rate.in + r.cw*rate.in*cwM + r.cr*rate.in*crM + r.o*rate.out) / 1e6;
+    rec.history = [];
   }
-  return usd * (Number(SETTINGS.fx)||1);
-}
-const totalOf = r => r.subset ? (r.i + r.o) : (r.i + r.o + r.cr + r.cw);
-
-/* ---------- provider inference ---------- */
-function providerOf(model, hint){
-  const m = String(model||'').toLowerCase();
-  if (/claude|opus|sonnet|haiku|fable|mythos/.test(m)) return 'anthropic';
-  if (/gpt|davinci|^o\d|codex/.test(m)) return 'openai';
-  if (/gemini|bison|gemma/.test(m)) return 'google';
-  if (/llama|mixtral|mistral|qwen|deepseek|grok|kimi/.test(m)) return 'other';
-  return hint || 'other';
-}
-
-/* ---------- parsing ---------- */
-function findUsage(obj, depth){
-  depth = depth||0;
-  if (!obj || typeof obj !== 'object' || depth > 6) return null;
-  if (Array.isArray(obj)){
-    for (const v of obj){ const r = findUsage(v, depth+1); if (r) return r; }
-    return null;
-  }
-  const has = n => Object.prototype.hasOwnProperty.call(obj, n);
-  const num = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
-
-  if (has('input_tokens') || has('output_tokens')){
-    return { i:num(obj.input_tokens), o:num(obj.output_tokens),
-             cr:num(obj.cache_read_input_tokens ?? obj.cached_input_tokens ?? obj.cache_read_tokens),
-             cw:num(obj.cache_creation_input_tokens ?? obj.cache_creation_tokens),
-             subset: has('cached_input_tokens') && !has('cache_creation_input_tokens') };
-  }
-  if (has('prompt_tokens') || has('completion_tokens')){
-    const cached = obj.prompt_tokens_details ? num(obj.prompt_tokens_details.cached_tokens) : 0;
-    return { i:num(obj.prompt_tokens), o:num(obj.completion_tokens), cr:cached, cw:0, subset:true };
-  }
-  if (has('promptTokenCount') || has('candidatesTokenCount')){
-    return { i:num(obj.promptTokenCount), o:num(obj.candidatesTokenCount),
-             cr:num(obj.cachedContentTokenCount), cw:0, subset:true };
-  }
-  for (const k of Object.keys(obj)){
-    const r = findUsage(obj[k], depth+1); if (r) return r;
-  }
-  return null;
-}
-function findKey(obj, names, depth){
-  depth = depth||0;
-  if (!obj || typeof obj !== 'object' || depth > 5) return null;
-  for (const n of names){
-    if (Object.prototype.hasOwnProperty.call(obj, n)){
-      const v = obj[n];
-      if (typeof v === 'string' || typeof v === 'number') return v;
+  if (Number.isFinite(rec.lat) && Number.isFinite(rec.lon)) {
+    const h = rec.history, last = h[h.length - 1];
+    if (!last || Math.abs(last[0] - rec.lat) > 1e-6 || Math.abs(last[1] - rec.lon) > 1e-6) {
+      h.push([rec.lat, rec.lon, rec.ts]);
+      const cap = clamp(Number(S.trail) || 240, 10, 1000);
+      if (h.length > cap) h.splice(0, h.length - cap);
     }
   }
-  for (const k of Object.keys(obj)){
-    const v = obj[k];
-    if (v && typeof v === 'object'){ const r = findKey(v, names, depth+1); if (r != null) return r; }
-  }
-  return null;
-}
-function toTs(v){
-  if (v == null) return null;
-  if (typeof v === 'number'){
-    if (v > 1e15) return Math.round(v/1000);      // microseconds
-    if (v > 1e11) return v;                        // milliseconds
-    if (v > 1e8)  return v*1000;                   // seconds
-    return null;
-  }
-  const s = String(v).trim();
-  if (/^\d+$/.test(s)) return toTs(Number(s));
-  const t = Date.parse(s);
-  return Number.isFinite(t) ? t : null;
-}
-function projectName(path){
-  if (!path) return null;
-  const parts = String(path).split(/[\\/]/).filter(Boolean);
-  const i = parts.indexOf('projects');
-  let name = (i >= 0 && parts[i+1]) ? parts[i+1] : parts[parts.length-2] || parts[parts.length-1];
-  return String(name).replace(/^-+/,'').replace(/-/g,'/').slice(-46);
-}
-function surfaceFrom(path, rec){
-  const p = String(path||'').toLowerCase();
-  if (p.includes('.claude')) return 'claude-code';
-  if (p.includes('.codex')) return 'codex';
-  if (p.includes('.gemini')) return 'gemini-cli';
-  if (rec && rec.sessionId) return 'claude-code';
-  return 'import';
+  targets.set(rec.id, rec);
 }
 
-/* Convert one raw JSON object into a record, or null */
-function recordFrom(obj, ctx){
-  if (!obj || typeof obj !== 'object') return null;
-  const u = findUsage(obj);
-  if (!u) return null;
-  if ((u.i + u.o + u.cr + u.cw) <= 0) return null;
-
-  const model = String(findKey(obj, ['model','model_name','modelName','modelVersion']) || 'unknown');
-  if (/^<|^synthetic/i.test(model)) return null;
-
-  const ts = toTs(findKey(obj, ['timestamp','ts','created_at','createdAt','created','time','date'])) || ctx.fallbackTs;
-  if (!ts) return null;
-
-  const provider = providerOf(model, ctx.provider);
-  const source = ctx.source || projectName(findKey(obj, ['cwd','projectPath','project'])) || 'unknown';
-
-  return {
-    ts, provider, model,
-    surface: ctx.surface || 'import',
-    source: String(source).slice(0,60),
-    i:u.i, o:u.o, cr:u.cr, cw:u.cw, subset: !!u.subset
-  };
-}
-
-function parseText(text, filename, log){
-  const out = [];
-  const name = String(filename||'pasted');
-  const ctx = {
-    surface: surfaceFrom(name),
-    source: projectName(name),
-    fallbackTs: null,
-    provider: null
-  };
-  const trimmed = text.trim();
-  if (!trimmed) return out;
-
-  if (/\.csv$/i.test(name) || (!trimmed.startsWith('{') && !trimmed.startsWith('[') && trimmed.includes(','))){
-    return parseCsv(trimmed, ctx);
-  }
-
-  // try whole-document JSON first (array or object)
-  if (trimmed.startsWith('[') || (trimmed.startsWith('{') && !trimmed.includes('\n{'))){
-    try {
-      const doc = JSON.parse(trimmed);
-      const arr = Array.isArray(doc) ? doc
-                : Array.isArray(doc.records) ? doc.records
-                : Array.isArray(doc.data) ? doc.data
-                : [doc];
-      for (const item of arr){
-        const r = recordFrom(item, ctx);
-        if (r) out.push(r);
-      }
-      if (out.length) return out;
-    } catch(e){ /* fall through to line mode */ }
-  }
-
-  // JSONL
-  let bad = 0;
-  for (const line of trimmed.split('\n')){
-    const s = line.trim();
-    if (!s || s[0] !== '{') continue;
-    let obj;
-    try { obj = JSON.parse(s); } catch(e){ bad++; continue; }
-    if (!ctx.source || ctx.source === 'unknown'){
-      const cwd = findKey(obj, ['cwd']); if (cwd) ctx.source = projectName(cwd);
-    }
-    const r = recordFrom(obj, ctx);
-    if (r) out.push(r);
-  }
-  if (bad && log) log('  ' + bad + ' unparsable line(s) skipped in ' + name);
-  return out;
-}
-
-function parseCsv(text, ctx){
-  const lines = text.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const split = l => {
-    const cells = []; let cur = '', q = false;
-    for (let i=0;i<l.length;i++){
-      const ch = l[i];
-      if (q){ if (ch === '"'){ if (l[i+1] === '"'){ cur+='"'; i++; } else q=false; } else cur+=ch; }
-      else if (ch === '"') q = true;
-      else if (ch === ',') { cells.push(cur); cur=''; }
-      else cur += ch;
-    }
-    cells.push(cur); return cells;
-  };
-  const hdr = split(lines[0]).map(h => h.trim().toLowerCase().replace(/[\s-]+/g,'_'));
-  const idx = names => { for (const n of names){ const i = hdr.indexOf(n); if (i >= 0) return i; } return -1; };
-  const cTs = idx(['timestamp','time','date','datetime','created_at']);
-  const cModel = idx(['model','model_name']);
-  const cIn = idx(['input','input_tokens','prompt_tokens','in']);
-  const cOut = idx(['output','output_tokens','completion_tokens','out']);
-  const cCr = idx(['cache_read','cache_read_input_tokens','cached_tokens']);
-  const cCw = idx(['cache_write','cache_creation','cache_creation_input_tokens']);
-  const cProv = idx(['provider','vendor']);
-  const cSrc = idx(['source','project','session']);
-  const cSurf = idx(['surface','tool','client']);
-  const out = [];
-  for (let i=1;i<lines.length;i++){
-    const c = split(lines[i]);
-    const num = j => j >= 0 ? (Number(String(c[j]).replace(/[^0-9.\-]/g,'')) || 0) : 0;
-    const ts = toTs(cTs >= 0 ? c[cTs].trim() : null);
-    if (!ts) continue;
-    const model = (cModel >= 0 ? c[cModel] : 'unknown').trim() || 'unknown';
-    const rec = {
-      ts, model,
-      provider: (cProv >= 0 && c[cProv].trim()) ? c[cProv].trim().toLowerCase() : providerOf(model),
-      surface: (cSurf >= 0 && c[cSurf].trim()) ? c[cSurf].trim() : (ctx.surface || 'import'),
-      source: (cSrc >= 0 && c[cSrc].trim()) ? c[cSrc].trim().slice(0,60) : (ctx.source || 'csv'),
-      i:num(cIn), o:num(cOut), cr:num(cCr), cw:num(cCw),
-      subset: cCw < 0 && cCr >= 0
-    };
-    if (rec.i + rec.o + rec.cr + rec.cw > 0) out.push(rec);
-  }
-  return out;
-}
-
-/* ---------- dedupe + ingest ---------- */
-const keyOf = r => r.ts+'|'+r.model+'|'+r.i+'|'+r.o+'|'+r.cr+'|'+r.cw;
-function ingest(recs){
-  let added = 0;
-  for (const r of recs){
-    const k = keyOf(r);
-    if (SEEN.has(k)) continue;
-    SEEN.add(k); RECORDS.push(r); added++;
-  }
-  if (added){ RECORDS.sort((a,b)=>a.ts-b.ts); save(); }
-  return added;
-}
-
-/* ---------- persistence (compact, dictionary-encoded) ---------- */
-function save(){
-  try {
-    const dict = [], map = new Map();
-    const id = s => { if (!map.has(s)){ map.set(s, dict.length); dict.push(s); } return map.get(s); };
-    const rows = RECORDS.map(r => [r.ts, id(r.provider), id(r.model), id(r.surface), id(r.source),
-                                   r.i, r.o, r.cr, r.cw, r.subset?1:0]);
-    const ok = Store.set(K_REC, JSON.stringify({v:1, d:dict, r:rows}));
-    if (!ok) note('Could not persist — storage full or blocked. Export a backup.', true);
-  } catch(e){ note('Save failed: '+e.message, true); }
-  Store.set(K_SET, JSON.stringify(SETTINGS));
-  Store.set(K_RATE, JSON.stringify(RATES));
-}
-function load(){
-  try {
-    const s = Store.get(K_SET); if (s) SETTINGS = {...DEFAULT_SETTINGS, ...JSON.parse(s)};
-    const p = Store.get(K_RATE); if (p){ const a = JSON.parse(p); if (Array.isArray(a) && a.length) RATES = a; }
-    const raw = Store.get(K_REC);
-    if (raw){
-      const o = JSON.parse(raw);
-      if (o && o.d && o.r){
-        RECORDS = o.r.map(a => ({ ts:a[0], provider:o.d[a[1]], model:o.d[a[2]], surface:o.d[a[3]],
-                                  source:o.d[a[4]], i:a[5], o:a[6], cr:a[7], cw:a[8], subset:!!a[9] }));
-      } else if (Array.isArray(o)) RECORDS = o;
-    }
-  } catch(e){ console.warn('load failed', e); }
-  RECORDS.sort((a,b)=>a.ts-b.ts);
-  SEEN = new Set(RECORDS.map(keyOf));
-}
-
-/* ---------- selection ---------- */
-function inRange(){
-  const days = Number(SETTINGS.range)||0;
-  const from = days ? Date.now() - days*86400000 : 0;
-  const prov = SETTINGS.provider;
-  return RECORDS.filter(r => r.ts >= from && (!prov || r.provider === prov));
-}
-function sumOf(list){
-  const t = {i:0,o:0,cr:0,cw:0,total:0,cost:0,n:0};
-  for (const r of list){
-    t.i+=r.i; t.o+=r.o; t.cr+=r.cr; t.cw+=r.cw;
-    t.total += totalOf(r); t.cost += costOf(r); t.n++;
-  }
-  return t;
-}
-
-/* ===================== charts ===================== */
-const SVGNS = 'http://www.w3.org/2000/svg';
-function el(tag, attrs, text){
-  const n = document.createElementNS(SVGNS, tag);
-  for (const k in attrs) n.setAttribute(k, attrs[k]);
-  if (text != null) n.textContent = text;
+function pruneStale() {
+  const cutoff = nowSec() - clamp(Number(S.stale) || 180, 30, 3600);
+  let n = 0;
+  targets.forEach((t, id) => {
+    if (t.ts < cutoff && id !== selectedId && !tracked.has(id)) { targets.delete(id); n++; }
+  });
   return n;
 }
 
-/**
- * Stacked column chart.
- * buckets: [{key, label, tip, parts:{seriesKey:value}}]
- * series:  [{key,label,colour}]
- */
-function drawStacked(svg, buckets, series, readout, opts){
-  opts = opts || {};
-  svg.textContent = '';
-  const active = series.filter(s => !hiddenSeries.has(s.key));
-  const n = buckets.length;
-  if (!n){
-    svg.setAttribute('viewBox','0 0 400 120');
-    svg.appendChild(el('text',{x:200,y:62,'text-anchor':'middle',class:'axis-text'},'No data in range'));
-    return;
-  }
-  const slot = clamp(opts.slot || 14, 6, 60);
-  const padL = 52, padR = 12, padT = 12, padB = 34;
-  const W = padL + padR + n*slot;
-  const H = opts.height || 240;
-  const plotH = H - padT - padB;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.style.minWidth = Math.max(320, Math.min(W, 4000)) + 'px';
+/* -------------------------------------------------------------------------
+   4. Air feed — OpenSky Network
+   Anonymous access still works but is severely rate-limited. Authenticated
+   access uses the OAuth2 client-credentials flow (basic auth was retired).
+   ------------------------------------------------------------------------- */
+const OpenSky = (() => {
+  const TOKEN_URL = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+  const API_URL   = 'https://opensky-network.org/api/states/all';
+  let token = null, tokenExp = 0, timer = null, backoff = 1, inflight = false, lastAttempt = 0;
 
-  const totals = buckets.map(b => active.reduce((s,k)=> s + (b.parts[k.key]||0), 0));
-  const max = Math.max(1, ...totals);
-  const nice = niceMax(max);
-  const y = v => padT + plotH - (v/nice)*plotH;
+  const px = (u) => S.osProxy ? S.osProxy + encodeURIComponent(u) : u;
+  // A relay that holds the OpenSky credentials itself authenticates upstream,
+  // so the browser must not (and need not) hold a client secret at all.
+  const relayAuthenticates = () => !!S.osProxy && !S.osSecret;
 
-  // gridlines
-  for (let g=0; g<=4; g++){
-    const v = nice*g/4;
-    svg.appendChild(el('line',{x1:padL,y1:y(v),x2:W-padR,y2:y(v),class:'axis-line'}));
-    svg.appendChild(el('text',{x:padL-7,y:y(v)+4,'text-anchor':'end',class:'axis-text'}, g===0?'0':fmtTok(v)));
-  }
-
-  buckets.forEach((b, idx) => {
-    const x = padL + idx*slot + 1;
-    const w = Math.max(2, slot-2);
-    let acc = 0;
-    active.forEach((s, si) => {
-      const v = b.parts[s.key] || 0;
-      if (v <= 0) return;
-      const h = Math.max(0.6, (v/nice)*plotH);
-      const yy = y(acc + v);
-      svg.appendChild(el('rect',{x, y:yy, width:w, height:h, fill:s.colour, rx:1}));
-      acc += v;
+  async function getToken() {
+    if (!S.osId || !S.osSecret) return null;
+    if (token && Date.now() < tokenExp - 60000) return token;
+    const body = new URLSearchParams({
+      grant_type: 'client_credentials', client_id: S.osId, client_secret: S.osSecret
     });
-    const tot = totals[idx];
-    const hit = el('rect',{ x:padL+idx*slot, y:padT, width:slot, height:plotH, class:'bar-hit' });
-    if (tot > 0){
-      hit.setAttribute('tabindex','0');
-      hit.setAttribute('role','button');
-      hit.setAttribute('aria-label', b.label+': '+fmtInt(tot)+' tokens');
+    const res = await fetch(px(TOKEN_URL), {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+    });
+    if (!res.ok) throw new Error('Token request failed (HTTP ' + res.status + ')');
+    const j = await res.json();
+    token = j.access_token;
+    tokenExp = Date.now() + (Number(j.expires_in) || 1800) * 1000;
+    return token;
+  }
+
+  function buildUrl() {
+    const p = new URLSearchParams({ extended: '1' });
+    if (S.osBbox) {
+      const b = map.getBounds();
+      p.set('lamin', clamp(b.getSouth(), -90, 90).toFixed(4));
+      p.set('lamax', clamp(b.getNorth(), -90, 90).toFixed(4));
+      p.set('lomin', clamp(b.getWest(), -180, 180).toFixed(4));
+      p.set('lomax', clamp(b.getEast(), -180, 180).toFixed(4));
     }
-    const show = () => { if (readout) readout.textContent = b.tip || (b.label+' — '+fmtInt(tot)+' tokens'); };
-    hit.addEventListener('mouseenter', show);
-    hit.addEventListener('focus', show);
-    hit.addEventListener('click', show);
-    hit.appendChild(el('title', {}, b.label+' — '+fmtInt(tot)+' tokens'));
-    svg.appendChild(hit);
-  });
+    return API_URL + '?' + p.toString();
+  }
 
-  // x labels
-  const step = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W-padL-padR)/64))));
-  buckets.forEach((b, idx) => {
-    if (idx % step) return;
-    svg.appendChild(el('text',{x:padL+idx*slot+slot/2, y:H-14, 'text-anchor':'middle', class:'axis-text'}, b.short||b.label));
-  });
-  svg.appendChild(el('line',{x1:padL,y1:padT+plotH,x2:W-padR,y2:padT+plotH,class:'axis-line'}));
+  function ingest(json) {
+    const ts = Number(json.time) || nowSec();
+    const rows = json.states || [];
+    let kept = 0;
+    rows.forEach(s => {
+      const lat = s[6], lon = s[5];
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+      const cat = Number.isFinite(s[17]) ? s[17] : null;
+      const rec = {
+        id: 'A:' + s[0], domain: 'air',
+        name: (s[1] || '').trim() || s[0].toUpperCase(),
+        origin: s[2] || 'Unknown',
+        dest: null,
+        cat, onGround: !!s[8],
+        lat, lon,
+        hdg: Number.isFinite(s[10]) ? s[10] : 0,
+        sogKn: Number.isFinite(s[9]) ? s[9] * MS_TO_KN : null,
+        altFt: Number.isFinite(s[13]) ? s[13] * M_TO_FT
+             : (Number.isFinite(s[7]) ? s[7] * M_TO_FT : null),
+        ts: Number.isFinite(s[4]) ? s[4] : ts,
+        demo: false,
+        meta: {
+          icao24: s[0], squawk: s[14] || null,
+          vrate: Number.isFinite(s[11]) ? s[11] : null,
+          src: ['ADS-B', 'ASTERIX', 'MLAT', 'FLARM'][s[16]] || 'Unknown'
+        }
+      };
+      rec.sub = airSubtype(rec);
+      rec.colour = airColour(rec);
+      upsert(rec); kept++;
+    });
+    return kept;
+  }
+
+  async function poll(force) {
+    if (inflight || !S.osEnabled) return;
+    // A failing request returns almost instantly, so map panning could otherwise
+    // fire several attempts per second and burn credits.
+    if (!force && Date.now() - lastAttempt < 5000) return;
+    lastAttempt = Date.now();
+    inflight = true;
+    setStatus('#st-air', 'warn', 'AIR polling');
+    try {
+      const headers = {};
+      let auth = relayAuthenticates();
+      if (S.osId && S.osSecret) {
+        try { const t = await getToken(); if (t) { headers.Authorization = 'Bearer ' + t; auth = true; } }
+        catch (e) {
+          Log.add('air', 'OAuth2 token exchange failed: ' + e.message +
+            (e instanceof TypeError ? ' (network/CORS — the Keycloak token endpoint may not allow browser origins; use a proxy prefix)' : ''));
+          toast('OpenSky auth failed', e.message + ' — continuing anonymously. If this is a CORS block, set a proxy prefix in Settings.', 'warn');
+        }
+      }
+      const res = await fetch(px(buildUrl()), { headers, cache: 'no-store' });
+      if (res.status === 429) {
+        backoff = clamp(backoff * 2, 2, 16);
+        const ra = res.headers.get('Retry-After');
+        setStatus('#st-air', 'err', 'AIR rate-limited');
+        Log.add('air', 'HTTP 429 rate limited. Anonymous credits are very small — authenticate or widen the interval.');
+        toast('OpenSky rate limit', 'Backing off to ' + interval() + ' s' + (ra ? ' (Retry-After ' + ra + ' s)' : '') + '. Authenticate or widen the polling interval.', 'warn');
+        return;
+      }
+      if (!res.ok) {
+        Log.add('air', 'HTTP ' + res.status + ' ' + res.statusText +
+          (res.status === 401 || res.status === 403 ? ' — credentials rejected or anonymous access refused.' : ''));
+        throw new Error('HTTP ' + res.status);
+      }
+      const payload = await res.json();
+      const kept = ingest(payload);
+      Log.add('air', 'HTTP ' + res.status + ' · ' + ((payload.states || []).length) + ' state vectors returned, ' +
+                     kept + ' with valid positions · ' + (auth ? 'authenticated' : 'anonymous') +
+                     (S.osBbox ? ' · bbox' : ' · global'));
+      if (!kept) Log.add('air', 'Zero aircraft in this view. Zoom out or pan to a busier region before concluding the feed is broken.');
+      backoff = 1;
+      const rem = res.headers.get('X-Rate-Limit-Remaining');
+      setStatus('#st-air', 'ok', 'AIR ' + kept + (auth ? ' relay' : ' anon') + (rem ? ' · ' + rem + ' cr' : ''));
+      Dash.refresh();
+    } catch (e) {
+      setStatus('#st-air', 'err', 'AIR error');
+      const cors = (e instanceof TypeError);
+      Log.add('air', (cors ? 'NETWORK/CORS FAILURE — the browser blocked or could not reach the request. '
+                           : 'Request failed: ') + e.message);
+      toast('Air feed error',
+        cors ? 'The browser could not complete the request to opensky-network.org. This is almost always CORS or a blocked origin — see Diagnostics in Settings.'
+             : e.message,
+        'err');
+      backoff = clamp(backoff * 2, 1, 16);
+    } finally {
+      inflight = false;
+      schedule();
+    }
+  }
+
+  const interval = () => clamp(Number(S.osInterval) || 15, 5, 600) * backoff;
+  function schedule() {
+    clearTimeout(timer);
+    if (S.osEnabled) timer = setTimeout(poll, interval() * 1000);
+  }
+  function start() { clearTimeout(timer); if (S.osEnabled) poll(true); else setStatus('#st-air', 'idle', 'AIR off'); }
+  function stop()  { clearTimeout(timer); setStatus('#st-air', 'idle', 'AIR off'); }
+  function reset() { backoff = 1; token = null; tokenExp = 0; start(); }
+  return { start, stop, poll, reset };
+})();
+
+/* -------------------------------------------------------------------------
+   5. Marine feed — AISStream WebSocket
+   The subscription message is read once at connect time, so changing the
+   bounding box requires a reconnect.
+   ------------------------------------------------------------------------- */
+const AIS = (() => {
+  const URL = 'wss://stream.aisstream.io/v0/stream';
+  let ws = null, retry = 0, retryTimer = null, msgCount = 0, manualStop = false;
+  let silenceTimer = null, posCount = 0;
+
+  function bbox() {
+    if (!S.aisViewport) return [[[-90, -180], [90, 180]]];
+    const b = map.getBounds();
+    return [[[clamp(b.getSouth(), -90, 90), clamp(b.getWest(), -180, 180)],
+             [clamp(b.getNorth(), -90, 90), clamp(b.getEast(), -180, 180)]]];
+  }
+
+  function connect() {
+    if (!S.aisEnabled) { setStatus('#st-sea', 'idle', 'SEA off'); return; }
+    if (!S.aisKey) {
+      setStatus('#st-sea', 'warn', 'SEA no key');
+      Log.add('sea', 'No API key set. AISStream has no anonymous mode.');
+      toast('AIS key required', 'Add a free aisstream.io API key in Settings to receive live marine data.', 'warn');
+      return;
+    }
+    disconnect(true);
+    manualStop = false;
+    setStatus('#st-sea', 'warn', 'SEA connecting');
+    try { ws = new WebSocket(URL); } catch (e) {
+      setStatus('#st-sea', 'err', 'SEA failed'); toast('AIS connection failed', e.message, 'err'); return;
+    }
+
+    ws.onopen = () => {
+      retry = 0; msgCount = 0; posCount = 0;
+      const bb = bbox();
+      Log.add('sea', 'Socket open. Subscribing with bounding box ' +
+        'SW ' + bb[0][0][0].toFixed(3) + ',' + bb[0][0][1].toFixed(3) +
+        ' → NE ' + bb[0][1][0].toFixed(3) + ',' + bb[0][1][1].toFixed(3) +
+        (S.aisViewport ? ' (current view)' : ' (global)'));
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        if (!posCount) {
+          Log.add('sea', 'No position reports after 25 s. Total messages of any type received: ' + msgCount + '. ' +
+            (msgCount === 0
+              ? 'Zero messages at all — the subscription was accepted but matched nothing. Untick "Subscribe to the current map view" and press Re-subscribe to test globally; if that also returns nothing, the key is not active yet.'
+              : 'Non-position messages are arriving, so the key works — this bounding box simply has no vessels reporting.'));
+          setStatus('#st-sea', 'warn', 'SEA no traffic');
+          toast('Marine feed silent', 'Connected, but no vessels in this bounding box after 25 seconds. See Diagnostics.', 'warn');
+        }
+      }, 25000);
+      ws.send(JSON.stringify({
+        APIKey: S.aisKey,
+        BoundingBoxes: bbox(),
+        // No FilterMessageTypes: an unrecognised entry silently suppresses the
+        // whole stream, which is indistinguishable from "no traffic in the box".
+        FilterMessageTypes: []
+      }));
+      setStatus('#st-sea', 'ok', 'SEA live');
+    };
+
+    ws.onmessage = (ev) => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (msgCount === 0) {
+        Log.add('sea', 'First message received, type "' + (m.MessageType || 'unknown') + '". Stream is alive and the key is valid.');
+      }
+      if (m.error || m.Error) {
+        Log.add('sea', 'Stream rejected the subscription: ' + String(m.error || m.Error));
+        setStatus('#st-sea', 'err', 'SEA rejected');
+        toast('AIS stream error', String(m.error || m.Error), 'err');
+        manualStop = true; return;
+      }
+      if (m.MessageType && m.MessageType.indexOf('PositionReport') > -1) posCount++;
+      handle(m);
+      if (++msgCount % 25 === 0) {
+        setStatus('#st-sea', 'ok', 'SEA ' + countSea() + ' vessels');
+        Dash.refreshThrottled();
+      }
+    };
+
+    ws.onerror = () => {
+      setStatus('#st-sea', 'err', 'SEA socket error');
+      Log.add('sea', 'WebSocket error. If this fires immediately, the key is malformed or the origin is blocked.');
+    };
+    ws.onclose = (ev) => {
+      clearTimeout(silenceTimer);
+      Log.add('sea', 'Socket closed (code ' + ev.code + (ev.reason ? ', ' + ev.reason : '') + ').' +
+        (ev.code === 1006 && !msgCount ? ' Closed before any message — usually a rejected API key.' : ''));
+      if (manualStop || !S.aisEnabled) { setStatus('#st-sea', 'idle', 'SEA off'); return; }
+      retry = clamp(retry + 1, 1, 6);
+      const wait = Math.pow(2, retry);
+      setStatus('#st-sea', 'warn', 'SEA retry ' + wait + 's');
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(connect, wait * 1000);
+    };
+  }
+
+  function handle(m) {
+    const md = m.MetaData || {}, type = m.MessageType, body = (m.Message || {})[type] || {};
+    const mmsi = md.MMSI || body.UserID;
+    if (!mmsi) return;
+    const id = 'S:' + mmsi;
+
+    if (type === 'ShipStaticData') {
+      const prev = targets.get(id);
+      const d = body.Dimension || {};
+      const loa = (Number(d.A) || 0) + (Number(d.B) || 0);
+      const beam = (Number(d.C) || 0) + (Number(d.D) || 0);
+      const rec = Object.assign({}, prev || {
+        id, domain: 'sea', lat: md.latitude, lon: md.longitude, hdg: 0,
+        sogKn: null, altFt: null, ts: nowSec(), demo: false, origin: null
+      });
+      rec.id = id; rec.domain = 'sea';
+      rec.name = (body.Name || md.ShipName || '').trim() || String(mmsi);
+      rec.sub = seaSubtype(body.Type);
+      rec.colour = seaColour(body.Type);
+      rec.dest = (body.Destination || '').trim().replace(/[@\s]+$/g, '') || null;
+      rec.meta = Object.assign({}, rec.meta, {
+        mmsi, imo: body.ImoNumber || null, callsign: (body.CallSign || '').trim() || null,
+        loa: loa || null, beam: beam || null,
+        draught: Number(body.MaximumStaticDraught) || null,
+        typeCode: body.Type == null ? null : body.Type,
+        eta: body.Eta ? [body.Eta.Month, body.Eta.Day, body.Eta.Hour, body.Eta.Minute] : null
+      });
+      if (!Number.isFinite(rec.lat)) { rec.lat = md.latitude; rec.lon = md.longitude; }
+      if (Number.isFinite(rec.lat)) upsert(rec);
+      return;
+    }
+
+    const lat = Number.isFinite(body.Latitude) ? body.Latitude : md.latitude;
+    const lon = Number.isFinite(body.Longitude) ? body.Longitude : md.longitude;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const prev = targets.get(id);
+    const hdg = (Number.isFinite(body.TrueHeading) && body.TrueHeading < 360)
+      ? body.TrueHeading : (Number.isFinite(body.Cog) ? body.Cog : (prev ? prev.hdg : 0));
+    const rec = {
+      id, domain: 'sea',
+      name: (md.ShipName || '').trim() || (prev && prev.name) || String(mmsi),
+      sub: prev ? prev.sub : 'Unknown vessel',
+      colour: prev ? prev.colour : seaColour(null),
+      origin: prev ? prev.origin : null,
+      dest: prev ? prev.dest : null,
+      lat, lon, hdg,
+      sogKn: Number.isFinite(body.Sog) ? body.Sog : null,
+      altFt: null,
+      onGround: false,
+      ts: md.time_utc ? (Date.parse(md.time_utc.replace(' +0000 UTC', 'Z').replace(' ', 'T')) / 1000 || nowSec()) : nowSec(),
+      demo: false,
+      meta: Object.assign({}, prev && prev.meta, {
+        mmsi, navstat: navStatus(body.NavigationalStatus), cog: body.Cog
+      })
+    };
+    upsert(rec);
+  }
+
+  const NAV = ['Under way (engine)', 'At anchor', 'Not under command', 'Restricted manoeuvrability',
+    'Constrained by draught', 'Moored', 'Aground', 'Fishing', 'Under way (sailing)'];
+  const navStatus = (n) => (n == null ? null : (NAV[n] || 'Status ' + n));
+
+  function countSea() { let n = 0; targets.forEach(t => { if (t.domain === 'sea' && !t.demo) n++; }); return n; }
+  function disconnect(quiet) {
+    clearTimeout(retryTimer);
+    manualStop = true;
+    if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
+    if (!quiet) setStatus('#st-sea', 'idle', 'SEA off');
+  }
+  return { connect, disconnect };
+})();
+
+/* -------------------------------------------------------------------------
+   6. Synthetic demo vessels — clearly flagged, opt-in only
+   ------------------------------------------------------------------------- */
+const Demo = (() => {
+  let timer = null;
+  const fleet = [];
+  const SPEC = [
+    ['DEMO PACIFIC DAWN', 70, 'Fremantle', 'Singapore', 229],
+    ['DEMO SWAN TRADER',  80, 'Kwinana',   'Port Hedland', 183],
+    ['DEMO ROTTNEST CAT', 60, 'Fremantle', 'Rottnest Island', 41],
+    ['DEMO SEA HARVEST',  30, 'Fremantle', 'Fishing grounds', 24],
+    ['DEMO TUG ARDROSS',  52, 'Fremantle', 'Kwinana', 32]
+  ];
+  function seed() {
+    fleet.length = 0;
+    const c = map.getCenter();
+    SPEC.forEach((s, i) => fleet.push({
+      name: s[0], type: s[1], from: s[2], to: s[3], loa: s[4],
+      lat: c.lat + (Math.random() - 0.5) * 1.2,
+      lon: c.lng + (Math.random() - 0.5) * 1.2,
+      hdg: Math.random() * 360, sog: 6 + Math.random() * 12, mmsi: 503900000 + i
+    }));
+  }
+  function tick() {
+    fleet.forEach(f => {
+      f.hdg = (f.hdg + (Math.random() - 0.5) * 6 + 360) % 360;
+      const d = (f.sog * 0.514444 * 3) / 111320;
+      f.lat += d * Math.cos(f.hdg * Math.PI / 180);
+      f.lon += d * Math.sin(f.hdg * Math.PI / 180) / Math.max(0.2, Math.cos(f.lat * Math.PI / 180));
+      upsert({
+        id: 'D:' + f.mmsi, domain: 'sea', name: f.name, sub: seaSubtype(f.type),
+        colour: seaColour(f.type), origin: f.from, dest: f.to,
+        lat: f.lat, lon: f.lon, hdg: f.hdg, sogKn: f.sog, altFt: null,
+        onGround: false, ts: nowSec(), demo: true,
+        meta: { mmsi: f.mmsi, loa: f.loa, beam: Math.round(f.loa / 6.5), typeCode: f.type,
+                navstat: 'Under way (engine)', draught: 6 + (f.loa / 40) }
+      });
+    });
+    Dash.refreshThrottled();
+  }
+  function start() { stop(); seed(); tick(); timer = setInterval(tick, 3000); }
+  function stop() {
+    clearInterval(timer); timer = null;
+    targets.forEach((t, id) => { if (t.demo) targets.delete(id); });
+    render(); Dash.refresh();
+  }
+  return { start, stop };
+})();
+
+/* -------------------------------------------------------------------------
+   7. Filtering
+   ------------------------------------------------------------------------- */
+const F = { q: '', domain: 'all', sub: 'all', origin: 'all', dest: 'all', ground: 'all' };
+
+function matches(t) {
+  if (F.domain !== 'all' && ((F.domain === 'air') !== (t.domain === 'air'))) return false;
+  if (F.sub !== 'all' && t.sub !== F.sub) return false;
+  if (F.origin !== 'all' && (t.origin || 'Unknown') !== F.origin) return false;
+  if (F.dest !== 'all' && (t.dest || 'Unknown') !== F.dest) return false;
+  if (F.ground === 'moving' && !(t.sogKn > 1) ) return false;
+  if (F.q) {
+    const hay = (t.name + ' ' + (t.meta.icao24 || '') + ' ' + (t.meta.mmsi || '') + ' ' +
+                 (t.meta.callsign || '') + ' ' + (t.origin || '') + ' ' + (t.dest || '')).toLowerCase();
+    if (hay.indexOf(F.q) === -1) return false;
+  }
+  return true;
+}
+function filtered() {
+  const out = [];
+  targets.forEach(t => { if (matches(t)) out.push(t); });
+  return out;
 }
 
-function niceMax(v){
-  const exp = Math.floor(Math.log10(v));
-  const base = Math.pow(10, exp);
-  const f = v/base;
-  const m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
-  return m*base;
+function rebuildFilterOptions() {
+  const subs = new Set(), origins = new Set(), dests = new Set();
+  targets.forEach(t => {
+    if (t.sub) subs.add(t.sub);
+    origins.add(t.origin || 'Unknown');
+    if (t.dest) dests.add(t.dest);
+  });
+  fillSelect('#f-subtype', subs, F.sub, 'All sub-types');
+  fillSelect('#f-origin', origins, F.origin, 'Any origin');
+  fillSelect('#f-dest', dests, F.dest, 'Any destination');
+}
+function fillSelect(sel, set, current, allLabel) {
+  const el = $(sel);
+  const vals = Array.from(set).sort((a, b) => a.localeCompare(b));
+  const sig = vals.join('|');
+  if (el.dataset.sig === sig) { el.value = current; return; }
+  el.dataset.sig = sig;
+  el.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = allLabel; el.appendChild(o0);
+  vals.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); });
+  el.value = set.has(current) ? current : 'all';
+  if (el.value === 'all' && current !== 'all') {
+    // the previously selected value disappeared from the feed
+    if (sel === '#f-subtype') F.sub = 'all';
+    if (sel === '#f-origin') F.origin = 'all';
+    if (sel === '#f-dest') F.dest = 'all';
+  }
 }
 
-/** Horizontal bar chart for model mix */
-function drawHBar(svg, rows, readout){
-  svg.textContent = '';
-  if (!rows.length){
-    svg.setAttribute('viewBox','0 0 400 120');
-    svg.appendChild(el('text',{x:200,y:62,'text-anchor':'middle',class:'axis-text'},'No data in range'));
+/* -------------------------------------------------------------------------
+   8. Marker rendering (reused divIcon markers, CSS-rotated)
+   ------------------------------------------------------------------------- */
+const markers = new Map();   // id -> { m, el, colour, sel }
+
+const PLANE = 'M0,-11 L2.4,-4 L11,1.6 L11,4 L2.4,2.2 L2,8 L5.4,10.6 L5.4,12 L0,10.6 L-5.4,12 L-5.4,10.6 L-2,8 L-2.4,2.2 L-11,4 L-11,1.6 L-2.4,-4 Z';
+const SHIP  = 'M0,-12 L5,-3 L5,8 L2.6,12 L-2.6,12 L-5,8 L-5,-3 Z';
+
+function iconHtml(t, sel) {
+  const path = t.domain === 'air' ? PLANE : SHIP;
+  const scale = t.domain === 'air' ? 0.78 : 0.72;
+  const halo = sel ? '<circle class="halo" cx="0" cy="0" r="15"/>' : '';
+  return '<svg width="34" height="34" viewBox="-17 -17 34 34" style="transform:rotate(' + (t.hdg || 0) + 'deg)">' +
+    halo + '<g transform="scale(' + scale + ')"><path class="body" d="' + path + '" fill="' + t.colour + '"/></g></svg>';
+}
+
+function render() {
+  const list = filtered();
+  const c = map.getCenter();
+  const cap = clamp(Number(S.cap) || 900, 100, 6000);
+  if (list.length > cap) {
+    list.sort((a, b) => {
+      if (a.id === selectedId) return -1;
+      if (b.id === selectedId) return 1;
+      const da = (a.lat - c.lat) ** 2 + (a.lon - c.lng) ** 2;
+      const db = (b.lat - c.lat) ** 2 + (b.lon - c.lng) ** 2;
+      return da - db;
+    });
+  }
+  const shown = list.slice(0, cap);
+  const keep = new Set();
+
+  shown.forEach(t => {
+    keep.add(t.id);
+    const sel = t.id === selectedId;
+    let entry = markers.get(t.id);
+    if (!entry) {
+      const icon = L.divIcon({
+        className: 'veh' + (t.demo ? ' demo' : '') + (sel ? ' sel' : ''),
+        html: iconHtml(t, sel), iconSize: [34, 34], iconAnchor: [17, 17]
+      });
+      const m = L.marker([t.lat, t.lon], { icon, riseOnHover: true, keyboard: true,
+                                           title: t.name + ' · ' + t.sub });
+      m.on('click', () => select(t.id));
+      m.addTo(markerLayer);
+      entry = { m, hdg: t.hdg, colour: t.colour, sel };
+      markers.set(t.id, entry);
+    } else {
+      entry.m.setLatLng([t.lat, t.lon]);
+      if (entry.hdg !== t.hdg || entry.colour !== t.colour || entry.sel !== sel) {
+        entry.m.setIcon(L.divIcon({
+          className: 'veh' + (t.demo ? ' demo' : '') + (sel ? ' sel' : ''),
+          html: iconHtml(t, sel), iconSize: [34, 34], iconAnchor: [17, 17]
+        }));
+        entry.hdg = t.hdg; entry.colour = t.colour; entry.sel = sel;
+      }
+    }
+    if (sel && entry.m.isPopupOpen && entry.m.isPopupOpen()) entry.m.setPopupContent(popupHtml(t));
+  });
+
+  markers.forEach((entry, id) => {
+    if (!keep.has(id)) { markerLayer.removeLayer(entry.m); markers.delete(id); }
+  });
+
+  $('#f-count').textContent = shown.length.toLocaleString('en-AU') +
+    (list.length > shown.length ? ' of ' + list.length.toLocaleString('en-AU') + ' (capped)' : ' shown');
+  drawTracks();
+}
+
+function drawTracks() {
+  trackLayer.clearLayers();
+  const ids = new Set(tracked);
+  if (selectedId) ids.add(selectedId);
+  ids.forEach(id => {
+    const t = targets.get(id);
+    if (!t || t.history.length < 2) return;
+    const pts = t.history.map(h => [h[0], h[1]]);
+    const isSel = id === selectedId;
+    L.polyline(pts, {
+      color: isSel ? pal().orange : pal().blue,
+      weight: isSel ? 3 : 2, opacity: .9,
+      dashArray: isSel ? null : '4 4', interactive: false
+    }).addTo(trackLayer);
+    L.circleMarker(pts[0], { radius: 3, color: isSel ? pal().orange : pal().blue,
+      fillOpacity: 1, interactive: false }).addTo(trackLayer);
+  });
+  renderTrackList();
+}
+
+function renderTrackList() {
+  const box = $('#track-list');
+  if (!tracked.size) {
+    box.innerHTML = '<p class="empty">No breadcrumb tracks pinned. Open a vehicle pop-up and choose <em>Track</em>.</p>';
     return;
   }
-  const rowH = 30, padT = 8, padL = 4, padR = 8, labelW = 150;
-  const W = 620, H = padT + rows.length*rowH + 8;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.style.minWidth = '320px';
-  const max = Math.max(...rows.map(r=>r.value), 1);
-  const barMax = W - labelW - padL - padR - 76;
-
-  rows.forEach((r, i) => {
-    const y0 = padT + i*rowH;
-    svg.appendChild(el('text',{x:padL, y:y0+18, class:'axis-text', style:'font-size:12px;fill:'+cssVar('--ih-text')}, trunc(r.label, 22)));
-    const w = Math.max(2, (r.value/max)*barMax);
-    svg.appendChild(el('rect',{x:labelW, y:y0+5, width:w, height:18, fill:r.colour, rx:2}));
-    svg.appendChild(el('text',{x:labelW+w+8, y:y0+19, class:'axis-text'}, fmtTok(r.value)+'  ('+r.pct.toFixed(1)+'%)'));
-    const hit = el('rect',{x:0,y:y0,width:W,height:rowH,class:'bar-hit',tabindex:'0',role:'button','aria-label':r.label+': '+fmtInt(r.value)+' tokens'});
-    const show = () => { if (readout) readout.textContent = r.tip; };
-    hit.addEventListener('mouseenter', show);
-    hit.addEventListener('focus', show);
-    hit.addEventListener('click', show);
-    hit.appendChild(el('title',{},r.tip));
-    svg.appendChild(hit);
+  box.innerHTML = '';
+  tracked.forEach(id => {
+    const t = targets.get(id);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--ih-divider);';
+    const nm = document.createElement('span');
+    nm.style.cssText = 'font-family:var(--font-mono);font-size:13px;flex:1;';
+    nm.textContent = (t ? t.name : id) + ' · ' + (t ? t.history.length : 0) + ' pts';
+    const zoom = document.createElement('button');
+    zoom.className = 'btn'; zoom.style.padding = '2px 8px'; zoom.textContent = 'Zoom';
+    zoom.onclick = () => { if (t) map.setView([t.lat, t.lon], Math.max(map.getZoom(), 9)); };
+    const del = document.createElement('button');
+    del.className = 'btn'; del.style.padding = '2px 8px'; del.textContent = 'Clear';
+    del.onclick = () => { tracked.delete(id); drawTracks(); };
+    row.append(nm, zoom, del);
+    box.appendChild(row);
   });
 }
-const trunc = (s,n) => { s = String(s); return s.length > n ? s.slice(0, n-1)+'…' : s; };
 
-/* ===================== aggregation for views ===================== */
-function bucketise(list, keyFn, maxBuckets, stackBy){
-  const map = new Map();
-  for (const r of list){
-    const k = keyFn(r.ts);
-    if (!map.has(k)) map.set(k, {key:k, parts:{}, total:0, cost:0, models:new Map()});
-    const b = map.get(k);
-    const t = totalOf(r);
-    b.total += t; b.cost += costOf(r);
-    b.models.set(r.model, (b.models.get(r.model)||0) + t);
-    if (stackBy === 'type'){
-      b.parts.input = (b.parts.input||0) + r.i;
-      b.parts.output = (b.parts.output||0) + r.o;
-      if (!r.subset){
-        b.parts.cacheWrite = (b.parts.cacheWrite||0) + r.cw;
-        b.parts.cacheRead = (b.parts.cacheRead||0) + r.cr;
-      }
-    } else if (stackBy === 'provider'){
-      b.parts[r.provider] = (b.parts[r.provider]||0) + t;
-    } else {
-      b.parts[r.model] = (b.parts[r.model]||0) + t;
-    }
-  }
-  let keys = Array.from(map.keys()).sort((a,b)=>a-b);
-  if (keys.length){
-    // fill gaps so idle hours read as idle rather than being collapsed
-    const stepMs = keys.length > 1 ? Math.min(...keys.slice(1).map((k,i)=>k-keys[i])) : 3600000;
-    const filled = [];
-    for (let t = keys[0]; t <= keys[keys.length-1]; t += stepMs) filled.push(t);
-    if (filled.length && filled.length < 5000) keys = filled;
-  }
-  if (keys.length > maxBuckets) keys = keys.slice(-maxBuckets);
-  return keys.map(k => map.get(k) || {key:k, parts:{}, total:0, cost:0, models:new Map()});
-}
+/* -------------------------------------------------------------------------
+   9. Selection + pop-up
+   ------------------------------------------------------------------------- */
+function popupHtml(t) {
+  const rows = [];
+  const add = (k, v) => { if (v !== null && v !== undefined && v !== '' && v !== '–')
+    rows.push('<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>'); };
 
-const TYPE_SERIES = [
-  {key:'input', label:'Fresh input'},
-  {key:'cacheWrite', label:'Cache write'},
-  {key:'cacheRead', label:'Cache read'},
-  {key:'output', label:'Output'}
-];
-
-function seriesFor(mode, buckets){
-  if (mode === 'type'){
-    const order = ['input','cacheWrite','cacheRead','output'];
-    return TYPE_SERIES.map((s,i) => ({...s, colour: chartColour(order.indexOf(s.key))}));
-  }
-  const totals = new Map();
-  for (const b of buckets) for (const k in b.parts) totals.set(k, (totals.get(k)||0) + b.parts[k]);
-  const keys = Array.from(totals.entries()).sort((a,b)=>b[1]-a[1]).slice(0,6).map(e=>e[0]);
-  return keys.map((k,i) => ({key:k, label:k, colour: chartColour(i)}));
-}
-
-/* ===================== rendering ===================== */
-function renderAll(){
-  const list = inRange();
-  renderKpis(list);
-  renderHourly(list);
-  renderDaily(list);
-  renderModelMix(list);
-  renderTables(list);
-  renderBudgetMeters();
-  $('#emptyPanel').hidden = RECORDS.length > 0;
-  $('#dataStats').textContent = RECORDS.length
-    ? fmtInt(RECORDS.length)+' records stored, '+fmtDay(RECORDS[0].ts)+' to '+fmtDay(RECORDS[RECORDS.length-1].ts)+'.'
-    : 'No records stored.';
-  const dl = $('#modelList');
-  if (dl){
-    const models = Array.from(new Set(RECORDS.map(r=>r.model))).slice(0,40);
-    dl.innerHTML = models.map(m=>'<option value="'+esc(m)+'"></option>').join('');
-  }
-}
-
-function windowStats(){
-  const hrs = Math.max(1, Number(SETTINGS.windowHrs)||5);
-  const from = Date.now() - hrs*3600000;
-  const list = RECORDS.filter(r => r.ts >= from && (!SETTINGS.provider || r.provider === SETTINGS.provider));
-  return {hrs, from, ...sumOf(list)};
-}
-function periodStats(fromTs){
-  const list = RECORDS.filter(r => r.ts >= fromTs && (!SETTINGS.provider || r.provider === SETTINGS.provider));
-  return sumOf(list);
-}
-function monthStart(){ const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.getTime(); }
-
-function meterHtml(label, used, cap, fmt){
-  if (!cap || cap <= 0) return '';
-  const pct = clamp((used/cap)*100, 0, 100);
-  const cls = pct >= 100 ? 'over' : pct >= 80 ? 'warn' : '';
-  const state = pct >= 100 ? '<span class="badge badge-err">Over cap</span>'
-              : pct >= 80 ? '<span class="badge badge-warn">Close to cap</span>'
-              : '<span class="badge badge-ok">Within cap</span>';
-  return `<div style="margin-bottom:16px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-      <strong style="font-size:14px">${esc(label)}</strong>${state}
-    </div>
-    <div class="meter"><div class="meter-track"><div class="meter-fill ${cls}" style="width:${pct.toFixed(1)}%"></div></div>
-    <div class="meter-cap"><span>${fmt(used)} used</span><span>${fmt(Math.max(0,cap-used))} left of ${fmt(cap)}</span></div></div>
-  </div>`;
-}
-
-function renderKpis(list){
-  const t = sumOf(list);
-  const w = windowStats();
-  const recent = RECORDS.filter(r => r.ts >= Date.now()-3*3600000);
-  const burn = sumOf(recent).total / 3;
-  const grid = $('#kpiGrid');
-  const days = Number(SETTINGS.range)||0;
-  const rangeLabel = days ? 'last '+days+(days===1?' day':' days') : 'all time';
-
-  const cards = [];
-  cards.push(card('Tokens', fmtTok(t.total), '', fmtInt(t.total)+' over '+rangeLabel));
-  cards.push(card('Estimated cost', fmtMoney(t.cost), '', t.n ? fmtInt(t.n)+' requests, rate card applied' : 'no requests in range'));
-
-  const cap = Number(SETTINGS.windowTok)||0;
-  if (cap > 0){
-    const left = Math.max(0, cap - w.total);
-    const pct = clamp((w.total/cap)*100,0,100);
-    const cls = pct >= 100 ? 'over' : pct >= 80 ? 'warn' : '';
-    const eta = burn > 0 && left > 0 ? ' · about '+(left/burn).toFixed(1)+' hr at current rate' : '';
-    cards.push(`<div class="kpi"><div class="kpi-label">Remaining this window</div>
-      <div class="kpi-value ${pct>=80?'accent':''}">${fmtTok(left)}</div>
-      <div class="meter"><div class="meter-track"><div class="meter-fill ${cls}" style="width:${pct.toFixed(1)}%"></div></div></div>
-      <div class="kpi-foot">${pct.toFixed(0)}% of your ${w.hrs}hr cap used${eta}</div></div>`);
+  if (t.domain === 'air') {
+    add('ICAO24', (t.meta.icao24 || '').toUpperCase());
+    add('Origin country', t.origin);
+    add('Altitude', t.altFt != null ? fmt(t.altFt, 0) + ' ft' : (t.onGround ? 'On ground' : null));
+    add('Ground speed', t.sogKn != null ? fmt(t.sogKn, 0) + ' kn' : null);
+    add('Track', fmt(t.hdg, 0) + '°');
+    add('Vertical rate', t.meta.vrate != null ? fmt(t.meta.vrate * 196.85, 0) + ' ft/min' : null);
+    add('Squawk', t.meta.squawk);
+    add('Position source', t.meta.src);
   } else {
-    cards.push(card('Last '+w.hrs+' hours', fmtTok(w.total), '', 'Set a window cap on the Budgets tab to see what is left'));
+    add('MMSI', t.meta.mmsi);
+    add('IMO', t.meta.imo);
+    add('Call sign', t.meta.callsign);
+    add('Speed', t.sogKn != null ? fmt(t.sogKn, 1) + ' kn' : null);
+    add('Heading', fmt(t.hdg, 0) + '°');
+    add('Nav status', t.meta.navstat);
+    add('Departure', t.origin);
+    add('Destination', t.dest);
+    add('LOA × beam', t.meta.loa ? fmt(t.meta.loa, 0) + ' × ' + fmt(t.meta.beam, 0) + ' m' : null);
+    add('Draught', t.meta.draught ? fmt(t.meta.draught, 1) + ' m' : null);
   }
+  add('Position', t.lat.toFixed(5) + ', ' + t.lon.toFixed(5));
+  add('Last report', new Date(t.ts * 1000).toLocaleTimeString('en-AU'));
 
-  cards.push(card('Burn rate', fmtTok(burn), '/hr', 'averaged over the last 3 hours'));
-
-  const models = new Set(list.map(r=>r.model));
-  const top = Array.from(models).length ? topModel(list) : null;
-  cards.push(card('Models used', String(models.size), '', top ? 'mostly '+trunc(top,26) : 'none in range'));
-
-  const last = RECORDS.length ? RECORDS[RECORDS.length-1] : null;
-  cards.push(card('Last activity', last ? fmtAgo(last.ts) : '—', '', last ? trunc(last.model,26)+' · '+esc(last.surface) : 'import data to begin'));
-
-  grid.innerHTML = cards.join('');
-}
-function card(label, value, unit, foot){
-  return `<div class="kpi"><div class="kpi-label">${esc(label)}</div>
-    <div class="kpi-value">${esc(value)}${unit?'<span class="kpi-unit">'+esc(unit)+'</span>':''}</div>
-    <div class="kpi-foot">${foot||''}</div></div>`;
-}
-function topModel(list){
-  const m = new Map();
-  for (const r of list) m.set(r.model, (m.get(r.model)||0) + totalOf(r));
-  const e = Array.from(m.entries()).sort((a,b)=>b[1]-a[1])[0];
-  return e ? e[0] : null;
+  const isTracked = tracked.has(t.id);
+  return '<div class="pop">' +
+    '<h3>' + esc(t.name) + (t.demo ? ' <span class="badge demo">DEMO — synthetic</span>' : '') + '</h3>' +
+    '<div class="sub">' + esc(t.sub) + ' · ' + (t.domain === 'air' ? 'AIRCRAFT' : 'VESSEL') + '</div>' +
+    '<dl>' + rows.join('') + '</dl>' +
+    '<div class="acts">' +
+      '<button class="btn ' + (isTracked ? 'accent' : '') + '" data-act="track" data-id="' + esc(t.id) + '">' +
+        (isTracked ? 'Stop tracking' : 'Track breadcrumbs') + '</button>' +
+      '<button class="btn" data-act="follow" data-id="' + esc(t.id) + '">Centre</button>' +
+    '</div></div>';
 }
 
-function renderHourly(list){
-  const mode = SETTINGS.hourlyMode || 'type';
-  const buckets = bucketise(list, hourKey, 336, mode);
-  const series = seriesFor(mode, buckets);
-  const view = buckets.map(b => {
-    const parts = b.parts;
-    const topM = Array.from(b.models.entries()).sort((a,b)=>b[1]-a[1])[0];
-    const detail = Object.keys(parts).filter(k=>parts[k]>0)
-      .map(k => (series.find(s=>s.key===k)?.label || k)+' '+fmtTok(parts[k])).join(' · ');
+function select(id) {
+  selectedId = id;
+  const t = targets.get(id);
+  if (!t) return;
+  const entry = markers.get(id);
+  if (entry) entry.m.bindPopup(popupHtml(t), { autoPan: true, maxWidth: 340 }).openPopup();
+  render();
+}
+map.on('popupclose', () => { selectedId = null; render(); });
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const id = b.dataset.id, t = targets.get(id);
+  if (b.dataset.act === 'track') {
+    if (tracked.has(id)) tracked.delete(id); else tracked.add(id);
+    if (t) { const m = markers.get(id); if (m) m.m.setPopupContent(popupHtml(t)); }
+    drawTracks();
+  } else if (b.dataset.act === 'follow' && t) {
+    map.setView([t.lat, t.lon], Math.max(map.getZoom(), 10));
+  }
+});
+
+/* -------------------------------------------------------------------------
+   10. Dashboard analytics (Chart.js)
+   ------------------------------------------------------------------------- */
+const Dash = (() => {
+  let cCat = null, cSub = null, cLoa = null, pending = false;
+
+  function chartColours() {
+    const p = pal();
+    return [p.blue, p.orange, p.green, p.steel, p.ochre, p.brick];
+  }
+  function baseOpts(horizontal) {
+    const grid = getComputedStyle(document.documentElement).getPropertyValue('--ih-divider').trim();
+    const text = getComputedStyle(document.documentElement).getPropertyValue('--ih-text').trim();
     return {
-      key:b.key, label:fmtHour(b.key),
-      short:new Date(b.key).getHours().toString().padStart(2,'0')+':00',
-      parts,
-      tip: b.total > 0
-        ? fmtHour(b.key)+'  —  '+fmtInt(b.total)+' tokens · '+fmtMoney(b.cost)+(detail?'  ('+detail+')':'')+(topM?'  · '+trunc(topM[0],28):'')
-        : fmtHour(b.key)+'  —  idle'
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: horizontal ? 'y' : 'x',
+      animation: { duration: 200 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--ih-surface-alt').trim(),
+                   titleColor: text, bodyColor: text, borderColor: grid, borderWidth: 1 }
+      },
+      scales: {
+        x: { ticks: { color: text, font: { family: 'IBM Plex Mono', size: 11 } }, grid: { color: grid } },
+        y: { ticks: { color: text, font: { family: 'IBM Plex Sans', size: 11 } }, grid: { color: grid } }
+      }
     };
+  }
+
+  function build() {
+    if (typeof Chart === 'undefined') return;
+    const text = getComputedStyle(document.documentElement).getPropertyValue('--ih-text').trim();
+    cCat = new Chart($('#c-cat'), {
+      type: 'doughnut',
+      data: { labels: ['Aircraft', 'Vessels'], datasets: [{ data: [0, 0], backgroundColor: chartColours().slice(0, 2), borderWidth: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '58%',
+        plugins: { legend: { position: 'bottom', labels: { color: text, boxWidth: 12, font: { family: 'IBM Plex Sans', size: 12 } } } } }
+    });
+    cSub = new Chart($('#c-sub'), {
+      type: 'bar',
+      data: { labels: [], datasets: [{ data: [], backgroundColor: pal().blue, borderWidth: 0 }] },
+      options: baseOpts(true)
+    });
+    cLoa = new Chart($('#c-loa'), {
+      type: 'bar',
+      data: { labels: [], datasets: [{ data: [], backgroundColor: pal().orange, borderWidth: 0 }] },
+      options: baseOpts(false)
+    });
+  }
+
+  function refresh() {
+    const list = filtered();
+    let air = 0, sea = 0, spdSum = 0, spdN = 0, maxAlt = null, airborne = 0, onGround = 0;
+    const subs = new Map(), origins = new Map(), dests = new Map(), loas = [];
+
+    list.forEach(t => {
+      if (t.domain === 'air') { air++; if (t.onGround) onGround++; else airborne++; } else sea++;
+      if (t.sogKn != null) { spdSum += t.sogKn; spdN++; }
+      if (t.altFt != null && (maxAlt === null || t.altFt > maxAlt)) maxAlt = t.altFt;
+      subs.set(t.sub, (subs.get(t.sub) || 0) + 1);
+      const o = t.origin || 'Unknown'; origins.set(o, (origins.get(o) || 0) + 1);
+      if (t.dest) dests.set(t.dest, (dests.get(t.dest) || 0) + 1);
+      if (t.meta && t.meta.loa) loas.push(t.meta.loa);
+    });
+
+    $('#m-air').textContent = air.toLocaleString('en-AU');
+    $('#m-sea').textContent = sea.toLocaleString('en-AU');
+    $('#m-spd').innerHTML = (spdN ? fmt(spdSum / spdN, 0) : '–') + '<span class="u"> kn</span>';
+    $('#m-alt').innerHTML = (maxAlt != null ? Math.round(maxAlt).toLocaleString('en-AU') : '–') + '<span class="u"> ft</span>';
+    $('#m-airborne').textContent = airborne + ' / ' + onGround;
+    loas.sort((a, b) => a - b);
+    $('#m-loa').innerHTML = (loas.length ? fmt(loas[Math.floor(loas.length / 2)], 0) : '–') + '<span class="u"> m</span>';
+
+    if (cCat) { cCat.data.datasets[0].data = [air, sea];
+                cCat.data.datasets[0].backgroundColor = chartColours().slice(0, 2); cCat.update(); }
+
+    if (cSub) {
+      const top = Array.from(subs.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      cSub.data.labels = top.map(r => r[0]);
+      cSub.data.datasets[0].data = top.map(r => r[1]);
+      cSub.data.datasets[0].backgroundColor = top.map((r, i) => i === 0 ? pal().orange : pal().blue);
+      cSub.options = baseOpts(true); cSub.update();
+    }
+
+    if (cLoa) {
+      const bins = [[0, 25], [25, 50], [50, 100], [100, 150], [150, 250], [250, 1000]];
+      const counts = bins.map(b => loas.filter(v => v >= b[0] && v < b[1]).length);
+      cLoa.data.labels = bins.map(b => b[0] + '–' + (b[1] === 1000 ? '250+' : b[1]) + ' m');
+      cLoa.data.datasets[0].data = counts;
+      cLoa.data.datasets[0].backgroundColor = pal().orange;
+      cLoa.options = baseOpts(false); cLoa.update();
+      $('#loa-note').textContent = loas.length
+        ? loas.length + ' vessels reporting dimensions.'
+        : 'No AIS static data received yet — dimensions arrive with ShipStaticData messages (up to 6-minute cadence).';
+    }
+
+    rankTable('#t-origin', origins);
+    rankTable('#t-dest', dests, 'No AIS voyage destinations received yet.');
+    rebuildFilterOptions();
+  }
+
+  function rankTable(sel, mapObj, emptyMsg) {
+    const tb = $(sel); tb.innerHTML = '';
+    const rows = Array.from(mapObj.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    if (!rows.length) {
+      const tr = document.createElement('tr'), td = document.createElement('td');
+      td.colSpan = 2; td.className = 'empty'; td.textContent = emptyMsg || 'No data yet.';
+      tr.appendChild(td); tb.appendChild(tr); return;
+    }
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      const a = document.createElement('td'); a.textContent = r[0];
+      const b = document.createElement('td'); b.className = 'n'; b.textContent = r[1].toLocaleString('en-AU');
+      tr.append(a, b); tb.appendChild(tr);
+    });
+  }
+
+  function refreshThrottled() {
+    if (pending) return;
+    pending = true;
+    setTimeout(() => { pending = false; refresh(); render(); }, 1200);
+  }
+  function rebuildTheme() { [cCat, cSub, cLoa].forEach(c => { if (c) c.destroy(); }); build(); refresh(); }
+  return { build, refresh, refreshThrottled, rebuildTheme };
+})();
+
+/* -------------------------------------------------------------------------
+   11. UI wiring
+   ------------------------------------------------------------------------- */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  S.theme = t; saveSettings();
+  drawLegend();
+  // recolour existing targets
+  targets.forEach(x => {
+    x.colour = x.domain === 'air' ? airColour(x) : seaColour(x.meta ? x.meta.typeCode : null);
   });
-  drawStacked($('#hourlyChart'), view, series, $('#hourlyReadout'), {slot:14, height:250});
-  $('#hourlySub').textContent = view.length
-    ? view.length+' hourly buckets'+(view.length>40?' — scroll the chart sideways for earlier hours':'')
-    : 'Hourly totals across the selected range';
-  renderLegend($('#hourlyLegend'), series);
-}
-function renderLegend(node, series){
-  node.innerHTML = series.map(s =>
-    `<button class="legend-item" type="button" data-series="${esc(s.key)}" aria-pressed="${hiddenSeries.has(s.key)?'false':'true'}">
-      <span class="legend-swatch" style="background:${s.colour}"></span>${esc(s.label)}</button>`).join('');
+  markers.forEach(e => { e.colour = null; });
+  render();
+  Dash.rebuildTheme();
 }
 
-function renderDaily(list){
-  const buckets = bucketise(list, dayKey, 90, 'provider');
-  const series = seriesFor('provider', buckets);
-  const view = buckets.map(b => ({
-    key:b.key, label:fmtDay(b.key), short:fmtDay(b.key), parts:b.parts,
-    tip: b.total > 0 ? fmtDay(b.key)+'  —  '+fmtInt(b.total)+' tokens · '+fmtMoney(b.cost) : fmtDay(b.key)+'  —  idle'
-  }));
-  drawStacked($('#dailyChart'), view, series, $('#dailyReadout'), {slot:20, height:220});
-}
-
-function renderModelMix(list){
-  const m = new Map();
-  for (const r of list){
-    if (!m.has(r.model)) m.set(r.model, {tok:0, cost:0, n:0});
-    const e = m.get(r.model); e.tok += totalOf(r); e.cost += costOf(r); e.n++;
-  }
-  const total = Array.from(m.values()).reduce((s,e)=>s+e.tok, 0) || 1;
-  const rows = Array.from(m.entries()).sort((a,b)=>b[1].tok-a[1].tok).slice(0,8)
-    .map(([model,e], i) => ({
-      label: model, value: e.tok, pct: e.tok/total*100, colour: chartColour(i),
-      tip: model+'  —  '+fmtInt(e.tok)+' tokens · '+fmtMoney(e.cost)+' · '+fmtInt(e.n)+' requests'
-           +(isPriced(model)?'':'  · unpriced, default rate applied')
-    }));
-  drawHBar($('#modelChart'), rows, $('#modelReadout'));
-}
-
-function renderTables(list){
-  // by model
-  const m = new Map();
-  for (const r of list){
-    if (!m.has(r.model)) m.set(r.model, {i:0,o:0,cr:0,cw:0,total:0,cost:0,provider:r.provider});
-    const e = m.get(r.model);
-    e.i+=r.i; e.o+=r.o; e.cr+=r.cr; e.cw+=r.cw; e.total+=totalOf(r); e.cost+=costOf(r);
-  }
-  const rows = Array.from(m.entries()).sort((a,b)=>b[1].total-a[1].total);
-  $('#modelTable tbody').innerHTML = rows.length ? rows.map(([model,e]) => `<tr>
-    <td class="model-cell">${esc(model)}${isPriced(model)?'':' <span class="badge badge-warn">unpriced</span>'}</td>
-    <td>${esc(e.provider)}</td>
-    <td class="num">${fmtInt(e.i)}</td><td class="num">${fmtInt(e.cw)}</td>
-    <td class="num">${fmtInt(e.cr)}</td><td class="num">${fmtInt(e.o)}</td>
-    <td class="num">${fmtInt(e.total)}</td><td class="num">${fmtMoney(e.cost)}</td></tr>`).join('')
-    : '<tr><td colspan="8">No records in the selected range.</td></tr>';
-  const t = sumOf(list);
-  $('#modelTable tfoot').innerHTML = rows.length ? `<tr><td colspan="2">Total</td>
-    <td class="num">${fmtInt(t.i)}</td><td class="num">${fmtInt(t.cw)}</td>
-    <td class="num">${fmtInt(t.cr)}</td><td class="num">${fmtInt(t.o)}</td>
-    <td class="num">${fmtInt(t.total)}</td><td class="num">${fmtMoney(t.cost)}</td></tr>` : '';
-
-  // by source
-  const s = new Map();
-  for (const r of list){
-    const k = r.source+'\u0000'+r.surface;
-    if (!s.has(k)) s.set(k, {source:r.source, surface:r.surface, n:0, total:0, cost:0, last:0});
-    const e = s.get(k); e.n++; e.total += totalOf(r); e.cost += costOf(r); e.last = Math.max(e.last, r.ts);
-  }
-  const srows = Array.from(s.values()).sort((a,b)=>b.total-a.total).slice(0,30);
-  $('#sourceTable tbody').innerHTML = srows.length ? srows.map(e => `<tr>
-    <td class="model-cell">${esc(e.source)}</td><td>${esc(e.surface)}</td>
-    <td class="num">${fmtInt(e.n)}</td><td class="num">${fmtInt(e.total)}</td>
-    <td class="num">${fmtMoney(e.cost)}</td><td>${esc(fmtAgo(e.last))}</td></tr>`).join('')
-    : '<tr><td colspan="6">No records in the selected range.</td></tr>';
-
-  // recent
-  const recent = list.slice(-100).reverse();
-  $('#recentTable tbody').innerHTML = recent.length ? recent.map(r => `<tr>
-    <td>${esc(fmtHour(r.ts))}</td><td class="model-cell">${esc(trunc(r.model,28))}</td>
-    <td>${esc(trunc(r.source,26))}</td>
-    <td class="num">${fmtInt(r.i)}</td><td class="num">${fmtInt(r.o)}</td>
-    <td class="num">${fmtInt(r.cr+r.cw)}</td><td class="num">${fmtInt(totalOf(r))}</td>
-    <td class="num">${fmtMoney(costOf(r))}</td></tr>`).join('')
-    : '<tr><td colspan="8">No records in the selected range.</td></tr>';
-}
-
-function renderBudgetMeters(){
-  const w = windowStats();
-  const week = periodStats(Date.now()-7*86400000);
-  const month = periodStats(monthStart());
-  let html = '';
-  html += meterHtml(`Rolling ${w.hrs}-hour window`, w.total, Number(SETTINGS.windowTok)||0, fmtTok);
-  html += meterHtml('Last 7 days', week.total, Number(SETTINGS.weekTok)||0, fmtTok);
-  html += meterHtml('This calendar month', month.total, Number(SETTINGS.monthTok)||0, fmtTok);
-  html += meterHtml('Spend this calendar month', month.cost, Number(SETTINGS.monthCost)||0, fmtMoney);
-  if (!html) html = '<p class="hint" style="margin:0">No caps set. Add at least one above and the burn-down meters will appear here.</p>';
-  $('#budgetMeters').innerHTML = html;
-}
-
-/* ===================== rate card UI ===================== */
-function renderRates(){
-  const tb = $('#rateTable tbody');
-  tb.innerHTML = RATES.map((r,i) => `<tr data-i="${i}">
-    <td><input type="text" value="${esc(r.match)}" data-f="match" aria-label="Model match ${i+1}" ${r.match==='*'?'readonly':''}></td>
-    <td><input type="text" value="${esc(r.provider)}" data-f="provider" aria-label="Provider ${i+1}"></td>
-    <td class="num"><input type="number" step="0.01" min="0" value="${r.in}" data-f="in" aria-label="Input rate ${i+1}"></td>
-    <td class="num"><input type="number" step="0.01" min="0" value="${r.out}" data-f="out" aria-label="Output rate ${i+1}"></td>
-    <td>${r.match==='*' ? '<span class="badge badge-info">fallback</span>' : '<button class="btn btn-sm btn-danger" type="button" data-del="'+i+'">Remove</button>'}</td>
-  </tr>`).join('');
-  $('#cwMult').value = SETTINGS.cwMult;
-  $('#crMult').value = SETTINGS.crMult;
-  $('#fxRate').value = SETTINGS.fx;
-}
-function collectRates(){
-  const rows = $$('#rateTable tbody tr');
-  const out = [];
-  for (const tr of rows){
-    const get = f => tr.querySelector('[data-f="'+f+'"]').value.trim();
-    const match = get('match');
-    if (!match) continue;
-    out.push({ match, provider:get('provider')||'other',
-               in:Math.max(0,Number(get('in'))||0), out:Math.max(0,Number(get('out'))||0) });
-  }
-  if (!out.some(r=>r.match==='*')) out.push({match:'*',provider:'other',in:3,out:15});
-  const star = out.filter(r=>r.match==='*');
-  RATES = out.filter(r=>r.match!=='*').concat(star.slice(0,1));
-}
-
-/* ===================== budgets UI ===================== */
-function fillBudgetForm(){
-  $('#bWindowHrs').value = SETTINGS.windowHrs;
-  $('#bWindowTok').value = SETTINGS.windowTok || '';
-  $('#bWeekTok').value   = SETTINGS.weekTok || '';
-  $('#bMonthTok').value  = SETTINGS.monthTok || '';
-  $('#bMonthCost').value = SETTINGS.monthCost || '';
-  $('#bCurrency').value  = SETTINGS.currency;
-}
-
-/* ===================== import ===================== */
-function logLine(msg){
-  const box = $('#importLog');
-  box.textContent = (box.textContent === 'Ready.' ? '' : box.textContent + '\n') + msg;
-  box.scrollTop = box.scrollHeight;
-}
-function note(msg, isError){
-  logLine((isError?'! ':'') + msg);
-}
-
-async function handleFiles(fileList){
-  const files = Array.from(fileList).filter(f =>
-    /\.(jsonl|json|csv|txt)$/i.test(f.name) && f.size < 220*1024*1024);
-  if (!files.length){ logLine('No .jsonl, .json or .csv files found in that selection.'); return; }
-  $('#importLog').textContent = 'Scanning '+files.length+' file(s)…';
-  let total = 0, added = 0, withData = 0;
-  const batch = [];
-  for (let i=0;i<files.length;i++){
-    const f = files[i];
-    try {
-      const text = await f.text();
-      const path = f.webkitRelativePath || f.name;
-      const recs = parseText(text, path, logLine);
-      if (recs.length){ withData++; batch.push(...recs); total += recs.length; }
-    } catch(e){ logLine('! could not read '+f.name+': '+e.message); }
-    if (i % 25 === 0) await new Promise(r=>setTimeout(r,0));
-  }
-  added = ingest(batch);
-  logLine('—');
-  logLine('Read '+files.length+' file(s); '+withData+' contained usage data.');
-  logLine('Found '+fmtInt(total)+' usage records, added '+fmtInt(added)+' new ('+fmtInt(total-added)+' already present).');
-  if (!total) logLine('No token counts recognised. The parser looks for input_tokens, prompt_tokens or promptTokenCount anywhere in each record.');
-  renderAll();
-}
-
-/* ===================== demo data ===================== */
-function demoData(){
-  // anchored to the current hour so re-clicking regenerates identical records and dedupes cleanly
-  const now = hourKey(Date.now());
-  const models = [
-    {m:'claude-opus-5', s:'claude-code', p:0.42},
-    {m:'claude-sonnet-5', s:'claude-code', p:0.30},
-    {m:'claude-haiku-4-5', s:'claude-code', p:0.10},
-    {m:'gpt-5.1-codex', s:'codex', p:0.10},
-    {m:'gemini-3-pro', s:'gemini-cli', p:0.08}
+function bindSettings() {
+  const map2 = [
+    ['#os-id', 'osId', 'value'], ['#os-secret', 'osSecret', 'value'],
+    ['#os-interval', 'osInterval', 'number'], ['#os-bbox', 'osBbox', 'checked'],
+    ['#os-enabled', 'osEnabled', 'checked'],
+    ['#ais-key', 'aisKey', 'value'], ['#ais-viewport', 'aisViewport', 'checked'],
+    ['#ais-enabled', 'aisEnabled', 'checked'],
+    ['#cap', 'cap', 'number'], ['#stale', 'stale', 'number'],
+    ['#trail', 'trail', 'number'], ['#demo', 'demo', 'checked']
   ];
-  const projects = ['route_tracker','qstory','heritage-tracker','mapposter','the-docket'];
-  const out = [];
-  let seed = 20260801;
-  const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
-  for (let h = 24*14; h >= 0; h--){
-    const ts0 = now - h*3600000;
-    const hour = new Date(ts0).getHours();
-    const day = new Date(ts0).getDay();
-    let intensity = (hour >= 8 && hour <= 22) ? 1 : 0.06;
-    if (day === 0 || day === 6) intensity *= 0.55;
-    if (rnd() > intensity) continue;
-    const turns = 1 + Math.floor(rnd()*7*intensity);
-    for (let t = 0; t < turns; t++){
-      let roll = rnd(), acc = 0, pick = models[0];
-      for (const mm of models){ acc += mm.p; if (roll <= acc){ pick = mm; break; } }
-      const anthropic = pick.s === 'claude-code';
-      const base = 400 + Math.floor(rnd()*2600);
-      out.push({
-        ts: ts0 + Math.floor(rnd()*3600000),
-        provider: providerOf(pick.m),
-        model: pick.m,
-        surface: pick.s,
-        source: projects[Math.floor(rnd()*projects.length)],
-        i: base,
-        o: 200 + Math.floor(rnd()*3000),
-        cr: anthropic ? Math.floor(rnd()*90000) : 0,
-        cw: anthropic ? Math.floor(rnd()*9000) : 0,
-        subset: !anthropic
-      });
-    }
-  }
-  return out.sort((a,b)=>a.ts-b.ts);
-}
-
-/* ===================== export ===================== */
-function download(filename, text, mime){
-  const blob = new Blob([text], {type: mime||'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
-}
-function exportJson(){
-  download('token-ledger-backup-'+new Date().toISOString().slice(0,10)+'.json',
-    JSON.stringify({app:APP_NAME, version:APP_VERSION, exported:new Date().toISOString(),
-                    settings:SETTINGS, rates:RATES, records:RECORDS}, null, 1));
-}
-function exportCsv(){
-  const list = inRange();
-  const head = 'timestamp,provider,model,surface,source,input,output,cache_read,cache_write,total,cost_'+(SETTINGS.currency||'AUD');
-  const body = list.map(r => [
-    new Date(r.ts).toISOString(), r.provider, r.model, r.surface,
-    '"'+String(r.source).replace(/"/g,'""')+'"',
-    r.i, r.o, r.cr, r.cw, totalOf(r), costOf(r).toFixed(4)
-  ].join(',')).join('\n');
-  download('token-ledger-'+new Date().toISOString().slice(0,10)+'.csv', head+'\n'+body, 'text/csv');
-}
-
-/* ===================== theme + tabs ===================== */
-function applyTheme(){
-  document.documentElement.setAttribute('data-theme', SETTINGS.theme);
-  const label = SETTINGS.theme === 'auto' ? 'Auto' : SETTINGS.theme === 'dark' ? 'Dark' : 'Light';
-  $('#themeBtn').textContent = 'Theme: ' + label;
-}
-function showTab(id){
-  $$('.tab').forEach(t => {
-    const on = t.id === id;
-    t.setAttribute('aria-selected', on ? 'true' : 'false');
-    const panel = document.getElementById(t.getAttribute('aria-controls'));
-    if (panel) panel.hidden = !on;
+  map2.forEach(([sel, key, kind]) => {
+    const el = $(sel);
+    if (kind === 'checked') el.checked = !!S[key]; else el.value = S[key];
+    el.addEventListener('change', () => {
+      S[key] = kind === 'checked' ? el.checked : (kind === 'number' ? Number(el.value) : el.value.trim());
+      saveSettings();
+      if (key === 'osEnabled') S.osEnabled ? OpenSky.reset() : OpenSky.stop();
+      if (['osId', 'osSecret', 'osInterval', 'osBbox', 'osProxy'].indexOf(key) > -1) OpenSky.reset();
+      if (key === 'aisEnabled') S.aisEnabled ? AIS.connect() : AIS.disconnect();
+      if (key === 'aisKey' && S.aisKey) {
+        // Entering a key implies intent to use the feed. Previously the key was
+        // stored but nothing connected unless the enable box was also ticked.
+        S.aisEnabled = true; $('#ais-enabled').checked = true; saveSettings();
+        AIS.connect();
+      }
+      if (key === 'demo') S.demo ? Demo.start() : Demo.stop();
+      if (key === 'cap' || key === 'trail') render();
+    });
   });
-  window.scrollTo({top:0, behavior:'instant'});
 }
 
-/* ===================== init ===================== */
-function init(){
-  try { initInner(); } catch(e){
-    console.error('Token Ledger init failed:', e);
-    const b = document.querySelector('#importLog'); if (b) b.textContent = 'Startup error: '+e.message;
-  }
-}
-function initInner(){
-  document.querySelectorAll('[data-version]').forEach(e => e.textContent = 'v'+APP_VERSION);
-  const metaV = document.querySelector('meta[name="version"]');
-  if (metaV && metaV.content !== APP_VERSION)
-    console.warn('Version drift: <meta> says '+metaV.content+' but APP_VERSION is '+APP_VERSION);
-  console.log('%c'+APP_NAME+' v'+APP_VERSION, 'font-weight:600');
+/* Isolates each step of the air feed so a failure can be attributed to
+   connectivity, CORS, authentication, or simply an empty viewport. */
+async function runDiagnostics() {
+  const btn = $('#btn-diag');
+  btn.disabled = true; btn.textContent = 'Running…';
+  Log.add('diag', '--- diagnostics start ---');
+  Log.add('diag', 'Build: v' + APP_VERSION + ' (' + APP_BUILD + '). If this is not the version you just deployed, ' +
+                  'you are on a cached copy — hard-refresh with Ctrl+F5, or Ctrl+Shift+R.');
+  Log.add('diag', 'Relay setting currently stored: ' + (S.osProxy ? S.osProxy : '(empty)'));
+  Log.add('diag', 'Page origin: ' + location.origin + location.pathname);
+  Log.add('diag', 'Protocol: ' + location.protocol + (location.protocol === 'https:' ? ' (ok)' : ' — mixed content will block https feeds'));
+  Log.add('diag', 'Leaflet: ' + (typeof L !== 'undefined' ? 'loaded' : 'MISSING') +
+                  ' · Chart.js: ' + (typeof Chart !== 'undefined' ? 'loaded' : 'MISSING'));
+  Log.add('diag', 'Targets currently in store: ' + targets.size + ' · markers drawn: ' + markers.size);
+  const b = map.getBounds();
+  Log.add('diag', 'Map view: SW ' + b.getSouth().toFixed(3) + ',' + b.getWest().toFixed(3) +
+                  ' → NE ' + b.getNorth().toFixed(3) + ',' + b.getEast().toFixed(3) + ' at zoom ' + map.getZoom());
 
-  load();
-  applyTheme();
-  if (!Store.ok) $('#storageWarn').hidden = false;
-
-  $('#rangeSel').value = String(SETTINGS.range);
-  $('#hourlyMode').value = SETTINGS.hourlyMode;
-  fillBudgetForm();
-  renderRates();
-  refreshProviders();
-  renderAll();
-
-  /* tabs */
-  $$('.tab').forEach(t => t.addEventListener('click', () => showTab(t.id)));
-  $$('[data-goto]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.goto)));
-
-  /* header controls */
-  $('#rangeSel').addEventListener('change', e => { SETTINGS.range = Number(e.target.value); save(); renderAll(); });
-  $('#provSel').addEventListener('change', e => { SETTINGS.provider = e.target.value; save(); renderAll(); });
-  $('#hourlyMode').addEventListener('change', e => { SETTINGS.hourlyMode = e.target.value; hiddenSeries.clear(); save(); renderAll(); });
-  $('#themeBtn').addEventListener('click', () => {
-    SETTINGS.theme = SETTINGS.theme === 'auto' ? 'light' : SETTINGS.theme === 'light' ? 'dark' : 'auto';
-    applyTheme(); save(); renderAll();
-  });
+  // Step 1 — plain anonymous request, no bbox, no auth.
   try {
-    const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-    const onScheme = () => { if (SETTINGS.theme === 'auto') renderAll(); };
-    if (mq && mq.addEventListener) mq.addEventListener('change', onScheme);
-    else if (mq && mq.addListener) mq.addListener(onScheme);   // Safari < 14
-  } catch(e){ /* system theme following is optional */ }
-
-  /* legend toggles */
-  $('#hourlyLegend').addEventListener('click', e => {
-    const b = e.target.closest('[data-series]'); if (!b) return;
-    const k = b.dataset.series;
-    if (hiddenSeries.has(k)) hiddenSeries.delete(k); else hiddenSeries.add(k);
-    renderAll();
-  });
-
-  /* import */
-  $('#pickFolderBtn').addEventListener('click', () => $('#folderInput').click());
-  $('#pickFilesBtn').addEventListener('click', () => $('#filesInput').click());
-  $('#folderInput').addEventListener('change', e => handleFiles(e.target.files));
-  $('#filesInput').addEventListener('change', e => handleFiles(e.target.files));
-
-  const dz = $('#dropzone');
-  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('hot'); }));
-  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('hot'); }));
-  dz.addEventListener('drop', async e => {
-    const items = e.dataTransfer.items;
-    if (items && items.length && items[0].webkitGetAsEntry){
-      const files = [];
-      const walk = entry => new Promise(res => {
-        if (entry.isFile) entry.file(f => { files.push(f); res(); });
-        else if (entry.isDirectory){
-          const rd = entry.createReader();
-          const readAll = () => rd.readEntries(async es => {
-            if (!es.length) return res();
-            await Promise.all(es.map(walk)); readAll();
-          });
-          readAll();
-        } else res();
-      });
-      const entries = Array.from(items).map(i => i.webkitGetAsEntry()).filter(Boolean);
-      await Promise.all(entries.map(walk));
-      if (files.length) return handleFiles(files);
+    const t0 = performance.now();
+    const r = await fetch('https://opensky-network.org/api/states/all?lamin=45.8&lomin=5.9&lamax=47.8&lomax=10.5', { cache: 'no-store' });
+    const ms = Math.round(performance.now() - t0);
+    if (r.ok) {
+      const j = await r.json();
+      Log.add('diag', 'STEP 1 anonymous request over Switzerland: OK, HTTP ' + r.status + ', ' +
+        ((j.states || []).length) + ' aircraft, ' + ms + ' ms. Anonymous access and CORS both work.');
+    } else {
+      Log.add('diag', 'STEP 1 anonymous request: HTTP ' + r.status + ' ' + r.statusText +
+        (r.status === 429 ? ' — rate limited. Anonymous credits exhausted; authenticate.' : '') +
+        (r.status === 401 || r.status === 403 ? ' — anonymous access refused. Credentials now required.' : ''));
     }
-    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
-  });
+  } catch (e) {
+    Log.add('diag', 'STEP 1 anonymous request: FAILED (' + e.message + '). ' +
+      (e instanceof TypeError
+        ? 'This is a network or CORS block, not a data problem. The API returned no usable CORS header for this origin, or the request never left the browser (extension, ad blocker, or corporate filter). A proxy prefix is the fix.'
+        : ''));
+  }
 
-  $('#pasteBtn').addEventListener('click', () => {
-    const text = $('#pasteBox').value;
-    if (!text.trim()){ logLine('Nothing pasted.'); return; }
-    const recs = parseText(text, 'pasted.jsonl', logLine);
-    const added = ingest(recs);
-    logLine('Pasted input: '+fmtInt(recs.length)+' records found, '+fmtInt(added)+' added.');
-    if (recs.length) $('#pasteBox').value = '';
-    renderAll();
-  });
-
-  $('#manualBtn').addEventListener('click', () => {
-    const model = $('#mModel').value.trim() || 'unknown';
-    const i = Math.max(0, Number($('#mIn').value)||0);
-    const o = Math.max(0, Number($('#mOut').value)||0);
-    const whenRaw = $('#mWhen').value.trim();
-    const ts = (!whenRaw || /^now$/i.test(whenRaw)) ? Date.now() : toTs(whenRaw);
-    const msg = $('#manualMsg');
-    if (!ts){ msg.textContent = 'Could not read that date. Try 2026-08-01T09:15 or leave it blank for now.'; return; }
-    if (i + o <= 0){ msg.textContent = 'Enter at least one token count.'; return; }
-    const added = ingest([{ ts, model, provider:providerOf(model),
-      surface:$('#mSurface').value.trim()||'chat', source:'manual', i, o, cr:0, cw:0, subset:false }]);
-    msg.textContent = added ? 'Added '+model+' at '+fmtHour(ts)+'.' : 'That record is already recorded.';
-    $('#mIn').value = ''; $('#mOut').value = ''; $('#mWhen').value = '';
-    refreshProviders(); renderAll();
-  });
-
-  const loadDemo = () => {
-    const added = ingest(demoData());
-    logLine('Loaded '+fmtInt(added)+' sample records spanning 14 days.');
-    refreshProviders(); renderAll(); showTab('tab-dash');
-  };
-  $('#demoBtn').addEventListener('click', loadDemo);
-  $('#demoBtn2').addEventListener('click', loadDemo);
-
-  /* data management */
-  $('#exportJsonBtn').addEventListener('click', exportJson);
-  $('#exportCsvBtn').addEventListener('click', exportCsv);
-  $('#importJsonBtn').addEventListener('click', () => $('#restoreInput').click());
-  $('#restoreInput').addEventListener('change', async e => {
-    const f = e.target.files[0]; if (!f) return;
+  // Step 1b — the relay, if one is configured.
+  if (S.osProxy) {
     try {
-      const o = JSON.parse(await f.text());
-      if (o.settings) SETTINGS = {...DEFAULT_SETTINGS, ...o.settings};
-      if (Array.isArray(o.rates) && o.rates.length) RATES = o.rates;
-      const added = ingest(Array.isArray(o.records) ? o.records : []);
-      logLine('Restored backup: '+fmtInt(added)+' new records added.');
-      applyTheme(); fillBudgetForm(); renderRates(); refreshProviders(); renderAll();
-    } catch(err){ logLine('! restore failed: '+err.message); }
-  });
-  $('#clearBtn').addEventListener('click', () => {
-    if (!confirm('Delete all '+fmtInt(RECORDS.length)+' stored records? Budgets and rates are kept. This cannot be undone.')) return;
-    RECORDS = []; SEEN.clear(); save(); refreshProviders(); renderAll();
-    logLine('All records deleted.');
-  });
+      const target = 'https://opensky-network.org/api/states/all?lamin=45.8&lomin=5.9&lamax=47.8&lomax=10.5';
+      const r = await fetch(S.osProxy + encodeURIComponent(target), { cache: 'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        Log.add('diag', 'STEP 1b relay: OK, HTTP ' + r.status + ', ' + ((j.states || []).length) +
+          ' aircraft returned through ' + S.osProxy + '. The relay is working — the air feed should populate.');
+      } else {
+        Log.add('diag', 'STEP 1b relay: HTTP ' + r.status + ' ' + r.statusText +
+          '. The relay is reachable but rejected the request. Check the Worker allowlist and any credential bindings.');
+      }
+    } catch (e) {
+      Log.add('diag', 'STEP 1b relay: FAILED (' + e.message + '). The relay URL is wrong, not deployed, or missing CORS headers of its own.');
+    }
+  } else {
+    Log.add('diag', 'STEP 1b relay: NONE CONFIGURED. The "Relay URL" box in Settings is empty — stored value is ' +
+                    JSON.stringify(S.osProxy) + '. This is the blocker. Until worker.js is deployed and its URL ' +
+                    'pasted into "CORS proxy prefix" (ending in ?url=), the air feed cannot work — credentials, ' +
+                    'polling interval and bounding box are all irrelevant while the browser is blocked at the network layer.');
+  }
 
-  /* budgets */
-  $('#saveBudgetBtn').addEventListener('click', () => {
-    SETTINGS.windowHrs = clamp(Number($('#bWindowHrs').value)||5, 1, 168);
-    SETTINGS.windowTok = Math.max(0, Number($('#bWindowTok').value)||0);
-    SETTINGS.weekTok   = Math.max(0, Number($('#bWeekTok').value)||0);
-    SETTINGS.monthTok  = Math.max(0, Number($('#bMonthTok').value)||0);
-    SETTINGS.monthCost = Math.max(0, Number($('#bMonthCost').value)||0);
-    SETTINGS.currency  = ($('#bCurrency').value.trim() || 'AUD').slice(0,6);
-    save(); fillBudgetForm(); renderAll();
-    $('#budgetMsg').textContent = 'Saved at '+new Date().toLocaleTimeString('en-AU')+'.';
-  });
+  // Step 2 — OAuth2 token exchange, only if credentials are present.
+  if (S.osId && S.osSecret) {
+    try {
+      const body = new URLSearchParams({ grant_type: 'client_credentials', client_id: S.osId, client_secret: S.osSecret });
+      const u = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+      const r = await fetch(S.osProxy ? S.osProxy + encodeURIComponent(u) : u, {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+      });
+      Log.add('diag', 'STEP 2 OAuth2 token exchange: HTTP ' + r.status +
+        (r.ok ? ' — token issued.' : ' — check the client ID and secret on your OpenSky account page.'));
+    } catch (e) {
+      Log.add('diag', 'STEP 2 OAuth2 token exchange: FAILED (' + e.message + '). ' +
+        (e instanceof TypeError ? 'The Keycloak token endpoint refused the browser origin. Set a CORS proxy prefix, or run anonymously.' : ''));
+    }
+  } else {
+    Log.add('diag', 'STEP 2 OAuth2: skipped, no client ID/secret entered. Running anonymously.');
+  }
 
-  /* rates */
-  $('#addRateBtn').addEventListener('click', () => {
-    RATES.unshift({match:'new-model', provider:'other', in:3, out:15});
-    renderRates();
-  });
-  $('#rateTable').addEventListener('click', e => {
-    const b = e.target.closest('[data-del]'); if (!b) return;
-    collectRates();
-    RATES.splice(Number(b.dataset.del), 1);
-    renderRates();
-  });
-  $('#saveRatesBtn').addEventListener('click', () => {
-    collectRates();
-    SETTINGS.cwMult = Math.max(0, Number($('#cwMult').value)||0);
-    SETTINGS.crMult = Math.max(0, Number($('#crMult').value)||0);
-    SETTINGS.fx     = Math.max(0, Number($('#fxRate').value)||1);
-    save(); renderRates(); renderAll();
-    $('#rateMsg').textContent = 'Rate card saved at '+new Date().toLocaleTimeString('en-AU')+'.';
-  });
+  // Step 3 — marine.
+  Log.add('diag', 'STEP 3 marine: key ' + (S.aisKey ? 'present (' + S.aisKey.length + ' chars)' : 'NOT SET') +
+    ' · feed ' + (S.aisEnabled ? 'enabled' : 'DISABLED') +
+    ' · subscription ' + (S.aisViewport ? 'current view' : 'global'));
+  if (S.aisKey && !S.aisEnabled) Log.add('diag', 'Marine key is set but the feed is switched off. Tick "Marine feed enabled".');
 
-  /* keep "last activity" and rolling windows honest */
-  setInterval(() => { if (!document.hidden) { renderKpis(inRange()); renderBudgetMeters(); } }, 60000);
+  Log.add('diag', '--- diagnostics end ---');
+  btn.disabled = false; btn.textContent = 'Run diagnostics';
 }
 
-function refreshProviders(){
-  const sel = $('#provSel');
-  const provs = Array.from(new Set(RECORDS.map(r=>r.provider))).sort();
-  const cur = SETTINGS.provider;
-  sel.innerHTML = '<option value="">All providers</option>' +
-    provs.map(p => '<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
-  sel.value = provs.includes(cur) ? cur : '';
-  SETTINGS.provider = sel.value;
+/* OpenSky hands out a credentials.json; accept it verbatim rather than making
+   the user dig the two values out by hand. Key names have varied between
+   releases, so accept the common spellings. */
+function importCredentials(raw) {
+  const msg = $('#os-json-msg');
+  const fail = (t) => { msg.textContent = t; msg.style.color = 'var(--ih-error-strong)'; Log.add('app', 'Credential import failed: ' + t); };
+  let j;
+  try { j = JSON.parse(String(raw).trim()); }
+  catch (e) { return fail('That is not valid JSON. Paste the entire file contents, braces included.'); }
+  if (!j || typeof j !== 'object') return fail('Expected a JSON object.');
+
+  const pick = (...names) => {
+    for (const n of names) {
+      const hit = Object.keys(j).find(k => k.toLowerCase().replace(/[_-]/g, '') === n);
+      if (hit && j[hit]) return String(j[hit]).trim();
+    }
+    return '';
+  };
+  const id = pick('clientid'), secret = pick('clientsecret');
+  if (!id || !secret) return fail('Could not find both clientId and clientSecret. Keys present: ' + Object.keys(j).join(', ') + '.');
+
+  S.osId = id; S.osSecret = secret;
+  $('#os-id').value = id; $('#os-secret').value = secret;
+  saveSettings();
+  msg.style.color = 'var(--ih-success-strong)';
+  msg.textContent = 'Imported client ID ' + id.slice(0, 6) + '… and a ' + secret.length + '-character secret. Stored in this browser only.';
+  Log.add('app', 'Credentials imported from JSON (client ID ' + id.slice(0, 6) + '…).');
+  $('#os-json').value = '';
+  OpenSky.reset();
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-else init();
+/* The relay URL is the single most failure-prone field on this page, so it
+   normalises input, saves on every keystroke rather than on blur, and reports
+   its own state without the user having to run diagnostics. */
+function normaliseRelay(raw) {
+  let v = String(raw || '').trim().replace(/\s+/g, '');
+  if (!v) return '';
+  if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+  if (v.indexOf('?url=') > -1) return v;          // already complete
+  v = v.replace(/[/?&]+$/, '');                   // strip trailing punctuation
+  return v + '/?url=';
+}
+
+function setRelayState(kind, label, msg) {
+  const pill = $('#relay-state');
+  pill.className = 'pill ' + kind;
+  $('.lbl', pill).textContent = label;
+  if (msg) {
+    const m = $('#relay-msg');
+    m.textContent = msg;
+    m.style.color = kind === 'ok' ? 'var(--ih-success-strong)'
+                  : kind === 'err' ? 'var(--ih-error-strong)' : 'var(--ih-text-secondary)';
+  }
+}
+
+async function testRelay() {
+  const btn = $('#btn-relay-test');
+  const v = normaliseRelay($('#os-proxy').value);
+  if (!v) { setRelayState('err', 'not set', 'Nothing entered. Deploy worker.js and paste its URL here.'); return; }
+  $('#os-proxy').value = v; S.osProxy = v; saveSettings();
+  btn.disabled = true; btn.textContent = 'Testing…';
+  setRelayState('warn', 'testing', 'Contacting the relay…');
+  const target = 'https://opensky-network.org/api/states/all?lamin=45.8&lomin=5.9&lamax=47.8&lomax=10.5';
+  try {
+    const r = await fetch(v + encodeURIComponent(target), { cache: 'no-store' });
+    const body = await r.text();
+    if (r.ok) {
+      let n = '?';
+      try { n = (JSON.parse(body).states || []).length; } catch (e) {}
+      setRelayState('ok', 'working', 'Relay OK — ' + n + ' aircraft returned over Switzerland. The air feed should populate within one polling cycle.');
+      Log.add('air', 'Relay test passed via ' + v + ' (' + n + ' aircraft).');
+      OpenSky.reset();
+    } else {
+      setRelayState('err', 'HTTP ' + r.status, 'The relay answered with HTTP ' + r.status + '. ' + body.slice(0, 180));
+      Log.add('air', 'Relay test failed: HTTP ' + r.status + ' — ' + body.slice(0, 180));
+    }
+  } catch (e) {
+    setRelayState('err', 'unreachable', 'Could not reach the relay (' + e.message + '). Check the URL is exactly the one Cloudflare shows on the Worker overview page, and that the Worker is deployed rather than only saved.');
+    Log.add('air', 'Relay test failed: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Test relay now';
+  }
+}
+
+function bindFilters() {
+  let qTimer = null;
+  $('#q').addEventListener('input', (e) => {
+    clearTimeout(qTimer);
+    qTimer = setTimeout(() => { F.q = e.target.value.trim().toLowerCase(); render(); Dash.refresh(); }, 180);
+  });
+  const wire = (sel, key) => $(sel).addEventListener('change', e => { F[key] = e.target.value; render(); Dash.refresh(); });
+  wire('#f-domain', 'domain'); wire('#f-subtype', 'sub');
+  wire('#f-origin', 'origin'); wire('#f-dest', 'dest'); wire('#f-ground', 'ground');
+  $('#btn-clear').addEventListener('click', () => {
+    F.q = ''; F.domain = 'all'; F.sub = 'all'; F.origin = 'all'; F.dest = 'all'; F.ground = 'all';
+    $('#q').value = ''; ['#f-domain', '#f-subtype', '#f-origin', '#f-dest', '#f-ground'].forEach(s => $(s).value = 'all');
+    render(); Dash.refresh();
+  });
+  $('#btn-filters').addEventListener('click', () => {
+    const p = $('#filters'), open = !p.classList.toggle('collapsed');
+    $('#btn-filters').setAttribute('aria-expanded', String(open));
+  });
+}
+
+function bindChrome() {
+  $('#btn-theme').addEventListener('click', () =>
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+  $('#btn-sidebar').addEventListener('click', () => {
+    const on = !$('#stage').classList.contains('with-sidebar');
+    $('#stage').classList.toggle('with-sidebar', on);
+    $('#btn-sidebar').setAttribute('aria-pressed', String(on));
+    S.sidebar = on; saveSettings();
+    setTimeout(() => map.invalidateSize(), 200);
+  });
+
+  $('#btn-settings').addEventListener('click', () => {
+    const d = $('#drawer'); const open = d.dataset.open !== 'true';
+    d.dataset.open = String(open);
+    if (open) $('#os-id').focus();
+  });
+  $('#btn-close-settings').addEventListener('click', () => { $('#drawer').dataset.open = 'false'; });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') $('#drawer').dataset.open = 'false';
+    if (e.key === '/' && document.activeElement !== $('#q')) { e.preventDefault(); $('#q').focus(); }
+  });
+
+  $('#btn-refresh').addEventListener('click', () => OpenSky.reset());
+  $('#btn-diag').addEventListener('click', runDiagnostics);
+  $('#btn-json-import').addEventListener('click', () => importCredentials($('#os-json').value));
+
+  const relayInput = $('#os-proxy');
+  relayInput.value = S.osProxy || '';
+  const relaySync = () => {
+    S.osProxy = normaliseRelay(relayInput.value); saveSettings();
+    setRelayState(S.osProxy ? 'warn' : 'err', S.osProxy ? 'saved, untested' : 'not set',
+      S.osProxy ? 'Stored as ' + S.osProxy + ' — press "Test relay now" to confirm it works.' : null);
+  };
+  relayInput.addEventListener('input', relaySync);
+  relayInput.addEventListener('blur', () => { relayInput.value = normaliseRelay(relayInput.value); relaySync(); });
+  $('#btn-relay-test').addEventListener('click', testRelay);
+  $('#btn-relay-clear').addEventListener('click', () => {
+    relayInput.value = ''; S.osProxy = ''; saveSettings();
+    setRelayState('err', 'not set', 'Cleared.');
+  });
+  $('#os-file').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => importCredentials(r.result);
+    r.onerror = () => { $('#os-json-msg').textContent = 'Could not read that file.'; };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+  $('#btn-diag-clear').addEventListener('click', () => { $('#diaglog').textContent = ''; });
+  $('#btn-diag-copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(Log.text()); toast('Copied', 'Diagnostic log copied to the clipboard.'); }
+    catch (e) { toast('Copy failed', 'Select the log text manually.', 'warn'); }
+  });
+  $('#btn-ais-reconnect').addEventListener('click', () => { S.aisEnabled = true; $('#ais-enabled').checked = true; saveSettings(); AIS.connect(); });
+  $('#btn-ais-stop').addEventListener('click', () => { S.aisEnabled = false; $('#ais-enabled').checked = false; saveSettings(); AIS.disconnect(); });
+
+  $('#legend').addEventListener('click', () => $('#legend').classList.toggle('collapsed'));
+
+  let moveTimer = null;
+  map.on('moveend', () => {
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => { render(); if (S.osBbox && S.osEnabled) OpenSky.poll(); }, 500);
+  });
+}
+
+/* -------------------------------------------------------------------------
+   12. Boot
+   ------------------------------------------------------------------------- */
+(function init() {
+  document.documentElement.dataset.theme = S.theme || 'dark';
+  $('#stage').classList.toggle('with-sidebar', S.sidebar !== false);
+  $('#btn-sidebar').setAttribute('aria-pressed', String(S.sidebar !== false));
+
+  const stamp = 'v' + APP_VERSION;
+  $('#ver-brand').textContent = stamp;
+  $('#ver-drawer').textContent = stamp;
+  $('#ver-brand').parentElement.title = 'Build ' + APP_VERSION + ' (' + APP_BUILD + ')';
+  document.title = 'Situational Traffic Monitor ' + stamp;
+  Log.add('app', 'Traffic Monitor ' + stamp + ' (build ' + APP_BUILD + ') loaded.');
+
+  drawLegend();
+  bindSettings();
+  bindFilters();
+  bindChrome();
+  Dash.build();
+  Dash.refresh();
+
+  setInterval(() => { const n = pruneStale(); if (n) { render(); Dash.refresh(); } }, 30000);
+  setInterval(() => render(), 5000);
+
+  setRelayState(S.osProxy ? 'warn' : 'err', S.osProxy ? 'saved, untested' : 'not set',
+    S.osProxy ? 'Stored as ' + S.osProxy + ' — press "Test relay now" to confirm it works.' : null);
+  if (S.osEnabled) OpenSky.start(); else setStatus('#st-air', 'idle', 'AIR off');
+  if (S.aisEnabled) AIS.connect(); else setStatus('#st-sea', 'idle', 'SEA off');
+  if (S.demo) Demo.start();
+
+  if (!S.aisKey && !S.demo) {
+    toast('Marine feed not configured', 'Add a free aisstream.io API key in Settings to enable live vessel tracking. Air traffic runs without a key, at reduced anonymous rate limits.');
+  }
+  setTimeout(() => map.invalidateSize(), 300);
+})();
 </script>
 </body>
 </html>
